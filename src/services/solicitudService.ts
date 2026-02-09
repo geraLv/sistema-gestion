@@ -126,14 +126,16 @@ export class SolicitudService {
       }
 
       // Verificar que nrosolicitud sea único
-      const existe = await SolicitudRepository.nrosolicitudExists(
-        dto.nroSolicitud,
-      );
-      if (existe) {
-        return {
-          success: false,
-          error: "Ya existe una solicitud con ese número",
-        };
+      if (dto.nroSolicitud && dto.nroSolicitud.trim().length > 0) {
+        const existe = await SolicitudRepository.nrosolicitudExists(
+          dto.nroSolicitud,
+        );
+        if (existe) {
+          return {
+            success: false,
+            error: "Ya existe una solicitud con ese número",
+          };
+        }
       }
 
       // Crear solicitud
