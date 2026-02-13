@@ -135,26 +135,6 @@ export class SolicitudRepository {
    * Crea una nueva solicitud
    */
   static async createSolicitud(dto: CreateSolicitudDTO): Promise<Solicitud> {
-    // Workaround for out-of-sync primary key sequence:
-    // compute next idsolicitud manually to avoid duplicate key errors.
-    let nextId = 1;
-    const { data: last, error: lastError } = await supabase
-      .from("solicitud")
-      .select("idsolicitud")
-      .order("idsolicitud", { ascending: false })
-      .limit(1);
-
-    if (lastError) {
-      console.error("Error fetching last solicitud id:", lastError.message);
-      throw new Error(
-        `Error al obtener última solicitud: ${lastError.message}`,
-      );
-    }
-
-    if (last && last.length > 0 && Number.isInteger(last[0].idsolicitud)) {
-      nextId = (last[0].idsolicitud as number) + 1;
-    }
-
     const nroSolicitud =
       dto.nroSolicitud && dto.nroSolicitud.trim().length > 0
         ? dto.nroSolicitud
@@ -164,7 +144,6 @@ export class SolicitudRepository {
       .from("solicitud")
       .insert([
         {
-          idsolicitud: nextId,
           relacliente: dto.selectCliente,
           relaproducto: dto.idproducto,
           relavendedor: dto.selectVendedor,

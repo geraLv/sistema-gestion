@@ -21,7 +21,6 @@ export class CuotaService {
     if (!cuota) {
       throw new Error("Cuota no encontrada");
     }
-
     // Si ya está pagada, error
     if (cuota.estado === 2) {
       throw new Error("Esta cuota ya está pagada");
@@ -30,22 +29,18 @@ export class CuotaService {
     // Pagar cuota
     const cuotaPagada = await CuotaRepository.pagarCuota(dto.idcuota);
 
-    // Obtener datos para recalcular
-    const datos = await CuotaRepository.getCuotaAndSolicitudData(dto.idcuota);
-
-    // Recalcular porcentaje de la solicitud
-    const nuevoTotal = datos.totalabonado + cuota.importe;
-    const nuevoPorcentaje = (nuevoTotal * 100) / datos.totalapagar;
-
+    console.log(cuota.relasolicitud);
     // Actualizar solicitud con nuevos valores
-    await CuotaRepository.actualizarPorcentajeSolicitud(datos.idsolicitud);
-
+    const actualizado = await CuotaRepository.actualizarPorcentajeSolicitud(
+      cuota.relasolicitud,
+    );
+    console.log("paso2");
     return {
       success: true,
       cuotaPagada,
       solicitudActualizada: {
-        totalabonado: nuevoTotal,
-        porcentajepagado: Math.round(nuevoPorcentaje * 100) / 100,
+        totalabonado: actualizado.totalabonado,
+        porcentajepagado: actualizado.porcentajepagado,
       },
     };
   }

@@ -171,6 +171,24 @@ export class AuthRepository {
     return updated || null;
   }
 
+  static async updateRefreshToken(
+    iduser: number,
+    refreshTokenHash: string | null,
+    refreshTokenExpires: string | null,
+  ): Promise<void> {
+    const { error } = await supabase
+      .from("app_user")
+      .update({
+        refresh_token_hash: refreshTokenHash,
+        refresh_token_expires: refreshTokenExpires,
+      })
+      .eq("iduser", iduser);
+
+    if (error) {
+      throw new Error(`Error al actualizar refresh token: ${error.message}`);
+    }
+  }
+
   static async setUserStatus(iduser: number, status: number): Promise<void> {
     const { error } = await supabase
       .from("app_user")

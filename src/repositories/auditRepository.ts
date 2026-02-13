@@ -47,4 +47,17 @@ export class AuditRepository {
     }
     return data || [];
   }
+
+  static async pruneOlderThan(days: number): Promise<void> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const { error } = await supabase
+      .from("audit_log")
+      .delete()
+      .lt("created_at", cutoff.toISOString());
+    if (error) {
+      console.error("Error pruning audit logs:", error.message);
+      throw new Error(`Error al limpiar auditoría: ${error.message}`);
+    }
+  }
 }

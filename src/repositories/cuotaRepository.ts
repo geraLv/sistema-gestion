@@ -110,13 +110,12 @@ export class CuotaRepository {
     if (error) {
       throw new Error(`Error al obtener datos: ${error.message}`);
     }
-
     const cuota = data as any;
     return {
       importe: cuota.importe,
-      idsolicitud: cuota.solicitud[0].idsolicitud,
-      totalabonado: cuota.solicitud[0].totalabonado,
-      totalapagar: cuota.solicitud[0].totalapagar,
+      idsolicitud: cuota.solicitud.idsolicitud,
+      totalabonado: cuota.solicitud.totalabonado,
+      totalapagar: cuota.solicitud.totalapagar,
     };
   }
 
@@ -158,7 +157,7 @@ export class CuotaRepository {
    */
   static async actualizarPorcentajeSolicitud(
     idsolicitud: number,
-  ): Promise<void> {
+  ): Promise<{ totalabonado: number; porcentajepagado: number }> {
     // Obtener datos de solicitud y cuotas
     const { data: solicitud, error: errorSol } = await supabase
       .from("solicitud")
@@ -177,6 +176,7 @@ export class CuotaRepository {
       .eq("relasolicitud", idsolicitud)
       .eq("estado", 2);
 
+    console.log("cuotas pagadas: ", cuotasPagadas);
     if (errorCuotas) {
       throw new Error(`Error al obtener cuotas: ${errorCuotas.message}`);
     }
@@ -188,18 +188,27 @@ export class CuotaRepository {
     const porcentajepagado =
       (totalabonado * 100) / (solicitud as any).totalapagar;
 
+    console.log("totalabonado:", totalabonado);
+    console.log("porcentajepagado:", porcentajepagado);
+
     // Actualizar solicitud
     const { error: errorUpdate } = await supabase
       .from("solicitud")
       .update({
-        totalabonado,
+        totalabonado: totalabonado,
         porcentajepagado: Math.round(porcentajepagado * 100) / 100,
       })
       .eq("idsolicitud", idsolicitud);
 
+    console.log(errorUpdate);
     if (errorUpdate) {
       throw new Error(`Error al actualizar solicitud: ${errorUpdate.message}`);
     }
+
+    return {
+      totalabonado,
+      porcentajepagado: Math.round(porcentajepagado * 100) / 100,
+    };
   }
 
   /**

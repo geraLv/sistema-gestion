@@ -37,6 +37,7 @@ export interface LoginDTO {
 export interface AuthResponse {
   success: boolean;
   token?: string;
+  refreshToken?: string;
   user?: UserPayload;
   userData?: UserPayload;
   message?: string;

@@ -18,9 +18,9 @@ router.get("/", async (req: Request, res: Response) => {
   try {
     const result = await SolicitudService.listarSolicitudes();
     if (!result.success) {
-      return res.status(400).json(result);
+      return res.status(400).json({ success: false, error: result.error });
     }
-    res.json(result.data || []);
+    res.json({ success: true, data: result.data || [] });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -38,9 +38,9 @@ router.get("/nro/:nrosolicitud", async (req: Request, res: Response) => {
     const { nrosolicitud } = req.params;
     const result = await SolicitudService.obtenerSolicitudPorNro(nrosolicitud);
     if (!result.success) {
-      return res.status(404).json(result);
+      return res.status(404).json({ success: false, error: result.error });
     }
-    res.json(result.data);
+    res.json({ success: true, data: result.data });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -58,9 +58,9 @@ router.get("/:id", async (req: Request, res: Response) => {
     const idsolicitud = parseInt(req.params.id, 10);
     const result = await SolicitudService.obtenerSolicitud(idsolicitud);
     if (!result.success) {
-      return res.status(404).json(result);
+      return res.status(404).json({ success: false, error: result.error });
     }
-    res.json(result.data);
+    res.json({ success: true, data: result.data });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -78,9 +78,9 @@ router.get("/:id/cuotas", async (req: Request, res: Response) => {
     const idsolicitud = parseInt(req.params.id, 10);
     const result = await SolicitudService.obtenerCuotas(idsolicitud);
     if (!result.success) {
-      return res.status(400).json(result);
+      return res.status(400).json({ success: false, error: result.error });
     }
-    res.json(result.data || []);
+    res.json({ success: true, data: result.data || [] });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -119,7 +119,7 @@ router.post("/", async (req: Request, res: Response) => {
 
     const result = await SolicitudService.crearSolicitud(dto);
     if (!result.success) {
-      return res.status(400).json(result);
+      return res.status(400).json({ success: false, error: result.error });
     }
 
     await AuditService.log({
@@ -132,7 +132,7 @@ router.post("/", async (req: Request, res: Response) => {
       ...getRequestMeta(req),
     });
 
-    res.status(201).json(result);
+    res.status(201).json({ success: true, data: result.data, message: result.message });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -176,7 +176,7 @@ router.put("/:id", async (req: Request, res: Response) => {
     const before = await SolicitudService.obtenerSolicitud(idsolicitud);
     const result = await SolicitudService.actualizarSolicitud(dto);
     if (!result.success) {
-      return res.status(400).json(result);
+      return res.status(400).json({ success: false, error: result.error });
     }
 
     await AuditService.log({
@@ -189,7 +189,7 @@ router.put("/:id", async (req: Request, res: Response) => {
       ...getRequestMeta(req),
     });
 
-    res.json(result);
+    res.json({ success: true, data: result.data, message: result.message });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -213,7 +213,7 @@ router.post("/:id/cuotas", async (req: Request, res: Response) => {
       parseInt(cantidadNueva, 10),
     );
     if (!result.success) {
-      return res.status(400).json(result);
+      return res.status(400).json({ success: false, error: result.error });
     }
 
     await AuditService.log({
@@ -226,7 +226,7 @@ router.post("/:id/cuotas", async (req: Request, res: Response) => {
       ...getRequestMeta(req),
     });
 
-    res.json(result);
+    res.json({ success: true, data: result.data, message: result.message });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -257,7 +257,7 @@ router.put("/:nro/observaciones", async (req: Request, res: Response) => {
       observacion,
     );
     if (!result.success) {
-      return res.status(400).json(result);
+      return res.status(400).json({ success: false, error: result.error });
     }
 
     await AuditService.log({
@@ -270,7 +270,7 @@ router.put("/:nro/observaciones", async (req: Request, res: Response) => {
       ...getRequestMeta(req),
     });
 
-    res.json(result);
+    res.json({ success: true, data: result.data, message: result.message });
   } catch (error: any) {
     res.status(500).json({
       success: false,

@@ -1,4 +1,5 @@
 import * as jwt from "jsonwebtoken";
+import { createHash } from "crypto";
 import { AuthRepository } from "../repositories/authRepository";
 import {
   LoginDTO,
@@ -11,7 +12,21 @@ import {
 const JWT_SECRET =
   process.env.JWT_SECRET ||
   "tu-clave-secreta-super-segura-cambiar-en-produccion";
-const JWT_EXPIRES_IN = "24h";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "15m";
+const JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET ||
+  "tu-refresh-secreto-super-seguro-cambiar-en-produccion";
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "30d";
+
+const hashToken = (token: string) =>
+  createHash("sha256").update(token).digest("hex");
+
+const refreshExpiryDate = () => {
+  const days = 30;
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+};
 
 export class AuthService {
   /**
@@ -77,11 +92,20 @@ export class AuthService {
       const token = jwt.sign(payload, JWT_SECRET, {
         expiresIn: JWT_EXPIRES_IN,
       });
+      const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
+        expiresIn: JWT_REFRESH_EXPIRES_IN,
+      });
+      await AuthRepository.updateRefreshToken(
+        user.iduser!,
+        hashToken(refreshToken),
+        refreshExpiryDate(),
+      );
 
       console.log("paso");
       return {
         success: true,
         token,
+        refreshToken,
         user: payload,
         userData: payload,
         message: "Login exitoso",
@@ -128,12 +152,12 @@ export class AuthService {
       }
 
       if (error.name === "JsonWebTokenError") {
-        return {
-          success: false,
-          valid: false,
-          error: "Token inválido",
-        };
-      }
+      return {
+        success: false,
+        valid: false,
+        error: "Token inválido",
+      };
+    }
 
       return {
         success: false,
@@ -252,6 +276,70 @@ export class AuthService {
         status: user.status ?? user.estado,
       },
     };
+  }
+
+  static async refreshTokens(refreshToken: string): Promise<AuthResponse> {
+    try {
+      if (!refreshToken) {
+        return { success: false, error: "Refresh token requerido" };
+      }
+
+      const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as UserPayload;
+
+      const user = await AuthRepository.getUserById(decoded.iduser);
+      if (!user) {
+        return { success: false, error: "Usuario no encontrado" };
+      }
+
+      const storedHash = (user as any).refresh_token_hash || null;
+      const storedExpires = (user as any).refresh_token_expires || null;
+      if (!storedHash || !storedExpires) {
+        return { success: false, error: "Refresh token inválido" };
+      }
+
+      if (new Date(storedExpires).getTime() < Date.now()) {
+        return { success: false, error: "Refresh token expirado" };
+      }
+
+      if (hashToken(refreshToken) !== storedHash) {
+        return { success: false, error: "Refresh token inválido" };
+      }
+
+      const payload: UserPayload = {
+        iduser: user.iduser!,
+        usuario: user.usuario,
+        nombre: user.nombre,
+        role: user.role || "user",
+        status: user.status ?? user.estado,
+      };
+
+      const newAccess = jwt.sign(payload, JWT_SECRET, {
+        expiresIn: JWT_EXPIRES_IN,
+      });
+      const newRefresh = jwt.sign(payload, JWT_REFRESH_SECRET, {
+        expiresIn: JWT_REFRESH_EXPIRES_IN,
+      });
+
+      await AuthRepository.updateRefreshToken(
+        user.iduser!,
+        hashToken(newRefresh),
+        refreshExpiryDate(),
+      );
+
+      return {
+        success: true,
+        token: newAccess,
+        refreshToken: newRefresh,
+        user: payload,
+        userData: payload,
+      };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Refresh inválido" };
+    }
+  }
+
+  static async clearRefreshToken(iduser: number): Promise<void> {
+    await AuthRepository.updateRefreshToken(iduser, null, null);
   }
 
   /**

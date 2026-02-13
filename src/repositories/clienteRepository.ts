@@ -72,29 +72,10 @@ export class ClienteRepository {
    * Crea un nuevo cliente
    */
   static async createCliente(dto: CreateClienteDTO): Promise<Cliente> {
-    // Workaround for out-of-sync primary key sequence:
-    // compute next idcliente manually to avoid duplicate key errors.
-    let nextId = 1;
-    const { data: last, error: lastError } = await supabase
-      .from("cliente")
-      .select("idcliente")
-      .order("idcliente", { ascending: false })
-      .limit(1);
-
-    if (lastError) {
-      console.error("Error fetching last cliente id:", lastError.message);
-      throw new Error(`Error al obtener último cliente: ${lastError.message}`);
-    }
-
-    if (last && last.length > 0 && Number.isInteger(last[0].idcliente)) {
-      nextId = (last[0].idcliente as number) + 1;
-    }
-
     const { data, error } = await supabase
       .from("cliente")
       .insert([
         {
-          idcliente: nextId,
           appynom: dto.appynom,
           dni: dto.dni,
           direccion: dto.direccion,

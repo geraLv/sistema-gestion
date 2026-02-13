@@ -21,7 +21,9 @@ export const authenticateToken = async (
 ) => {
   try {
     const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+    const headerToken = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+    const cookieToken = (req as any).cookies?.access_token;
+    const token = headerToken || cookieToken;
 
     if (!token) {
       return res.status(401).json({
@@ -76,6 +78,22 @@ router.post("/login", async (req: Request, res: Response) => {
     if (!result.success) {
       return res.status(401).json(result);
     }
+    const isProd = process.env.NODE_ENV === "production";
+    const cookieBase = {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: (isProd ? "none" : "lax") as "none" | "lax" | "strict",
+      path: "/",
+    };
+
+    res.cookie("access_token", result.token, {
+      ...cookieBase,
+      maxAge: 15 * 60 * 1000,
+    });
+    res.cookie("refresh_token", result.refreshToken, {
+      ...cookieBase,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
 
     await AuditService.log({
       actor: result.userData || result.user,
@@ -87,7 +105,11 @@ router.post("/login", async (req: Request, res: Response) => {
       ...getRequestMeta(req),
     });
 
-    res.json(result);
+    res.json({
+      success: true,
+      userData: result.userData || result.user,
+      message: result.message,
+    });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -107,6 +129,9 @@ router.post("/validate-token", async (req: Request, res: Response) => {
     if (!token && req.headers["authorization"]) {
       token = req.headers["authorization"].split(" ")[1];
     }
+    if (!token) {
+      token = (req as any).cookies?.access_token || "";
+    }
 
     const result = await AuthService.validateToken(token);
     res.json(result);
@@ -124,7 +149,9 @@ router.post("/validate-token", async (req: Request, res: Response) => {
  */
 router.get("/me", authenticateToken, async (req: Request, res: Response) => {
   try {
-    const token = req.headers["authorization"]?.split(" ")[1];
+    const token =
+      req.headers["authorization"]?.split(" ")[1] ||
+      (req as any).cookies?.access_token;
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -137,7 +164,10 @@ router.get("/me", authenticateToken, async (req: Request, res: Response) => {
       return res.status(401).json(result);
     }
 
-    res.json(result);
+    res.json({
+      success: true,
+      userData: result.user,
+    });
   } catch (error: any) {
     res.status(500).json({
       success: false,
@@ -197,6 +227,19 @@ router.post(
   authenticateToken,
   async (req: Request, res: Response) => {
     try {
+      await AuthService.clearRefreshToken((req as any).user?.iduser);
+
+      const isProd = process.env.NODE_ENV === "production";
+      const cookieBase = {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: (isProd ? "none" : "lax") as "none" | "lax" | "strict",
+        path: "/",
+      };
+
+      res.clearCookie("access_token", cookieBase);
+      res.clearCookie("refresh_token", cookieBase);
+
       res.json({
         success: true,
         message: "Logout exitoso",
@@ -226,26 +269,35 @@ router.post(
  */
 router.post(
   "/refresh-token",
-  authenticateToken,
   async (req: Request, res: Response) => {
     try {
-      const token = req.headers["authorization"]?.split(" ")[1];
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          error: "Token no encontrado",
-        });
-      }
-
-      const result = await AuthService.getCurrentUser(token);
+      const refreshToken = (req as any).cookies?.refresh_token;
+      const result = await AuthService.refreshTokens(refreshToken);
       if (!result.success) {
         return res.status(401).json(result);
       }
 
+      const isProd = process.env.NODE_ENV === "production";
+      const cookieBase = {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: (isProd ? "none" : "lax") as "none" | "lax" | "strict",
+        path: "/",
+      };
+
+      res.cookie("access_token", result.token, {
+        ...cookieBase,
+        maxAge: 15 * 60 * 1000,
+      });
+      res.cookie("refresh_token", result.refreshToken, {
+        ...cookieBase,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+
       res.json({
         success: true,
-        user: result.user,
-        message: "Usuario validado",
+        userData: result.userData || result.user,
+        message: "Token renovado",
       });
     } catch (error: any) {
       res.status(500).json({

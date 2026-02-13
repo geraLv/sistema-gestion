@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { json } from "body-parser";
+import cookieParser from "cookie-parser";
 import authRouter, { authenticateToken, requireRole } from "./routes/auth";
 import clientesRouter from "./routes/clientes";
 import localidadesRouter from "./routes/localidades";
@@ -16,7 +17,17 @@ import adminRouter from "./routes/admin";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+const corsOrigin = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
+  : ["http://localhost:5173", "http://localhost:3000"];
+
+app.use(
+  cors({
+    origin: corsOrigin,
+    credentials: true,
+  }),
+);
+app.use(cookieParser());
 app.use(json());
 
 // Health check
