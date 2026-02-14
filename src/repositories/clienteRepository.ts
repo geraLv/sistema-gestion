@@ -10,8 +10,12 @@ export class ClienteRepository {
   /**
    * Obtiene todos los clientes con sus datos de localidad
    */
-  static async getAllClientes(): Promise<ClienteWithLocalidad[]> {
-    const { data, error } = await supabase
+  static async getAllClientes(
+    q?: string,
+    page?: number,
+    pageSize?: number,
+  ): Promise<{ data: ClienteWithLocalidad[]; total: number }> {
+    let query = supabase
       .from("cliente")
       .select(
         `
@@ -25,15 +29,36 @@ export class ClienteRepository {
         fechalta,
         localidad(nombre) 
       `,
+        { count: "exact" },
       )
       .order("appynom", { ascending: true });
+
+    const queryTerm = q?.trim();
+    if (queryTerm) {
+      const numeric = Number(queryTerm);
+      if (Number.isFinite(numeric)) {
+        query = query.or(`appynom.ilike.%${queryTerm}%,dni.eq.${queryTerm}`);
+      } else {
+        query = query.ilike("appynom", `%${queryTerm}%`);
+      }
+    }
+
+    const size = pageSize && pageSize > 0 ? pageSize : undefined;
+    const currentPage = page && page > 0 ? page : 1;
+    if (size) {
+      const from = (currentPage - 1) * size;
+      const to = from + size - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) {
       console.error("Error fetching clientes:", error.message);
       throw new Error(`Error al obtener clientes: ${error.message}`);
     }
 
-    return data || [];
+    return { data: data || [], total: count || 0 };
   }
 
   /**

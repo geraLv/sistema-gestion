@@ -63,6 +63,69 @@ export class ReporteRepository {
     };
   }
 
+  static async getRecibosSolicitudPagadosData(
+    idsolicitud: number,
+  ): Promise<ReciboCuotaData[]> {
+    const { data, error } = await supabase
+      .from("cuotas")
+      .select(
+        `
+        idcuota, nrocuota, importe, vencimiento, estado,
+        solicitud:relasolicitud(
+          nrosolicitud,
+          cliente:relacliente(appynom, dni, direccion, telefono, localidad:relalocalidad(nombre)),
+          producto:relaproducto(descripcion)
+        )
+      `,
+      )
+      .eq("relasolicitud", idsolicitud)
+      .eq("estado", 2)
+      .order("nrocuota", { ascending: true });
+
+    if (error) {
+      throw new Error(
+        `Error al obtener recibos de solicitud: ${error.message}`,
+      );
+    }
+
+    return (data || [])
+      .map((row: any) => {
+        const solicitud = Array.isArray(row.solicitud)
+          ? row.solicitud[0]
+          : row.solicitud;
+        const cliente = Array.isArray(solicitud?.cliente)
+          ? solicitud.cliente[0]
+          : solicitud?.cliente;
+        const producto = Array.isArray(solicitud?.producto)
+          ? solicitud.producto[0]
+          : solicitud?.producto;
+        const localidad = Array.isArray(cliente?.localidad)
+          ? cliente.localidad[0]
+          : cliente?.localidad;
+
+        if (!solicitud || !cliente || !producto) return null;
+
+        return {
+          idcuota: row.idcuota,
+          nrocuota: row.nrocuota,
+          importe: row.importe,
+          vencimiento: row.vencimiento,
+          nrosolicitud: solicitud.nrosolicitud,
+          cliente: {
+            appynom: cliente.appynom,
+            dni: cliente.dni,
+            direccion: cliente.direccion,
+            telefono: cliente.telefono,
+            localidad: localidad?.nombre || "",
+          },
+          producto: {
+            descripcion: producto.descripcion,
+          },
+        } as ReciboCuotaData;
+      })
+      .filter(Boolean) as ReciboCuotaData[];
+  }
+
   static async getRecibosMesData(
     mes: string,
     localidadId?: number,

@@ -9,12 +9,17 @@ export class ClienteService {
   /**
    * Obtiene lista de clientes
    */
-  static async listarClientes(): Promise<ClienteResponse> {
+  static async listarClientes(
+    q?: string,
+    page?: number,
+    pageSize?: number,
+  ): Promise<ClienteResponse> {
     try {
-      const clientes = await ClienteRepository.getAllClientes();
+      const result = await ClienteRepository.getAllClientes(q, page, pageSize);
       return {
         success: true,
-        data: clientes,
+        data: result.data,
+        total: result.total,
       };
     } catch (error: any) {
       return {

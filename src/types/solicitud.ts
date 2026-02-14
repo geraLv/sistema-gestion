@@ -69,6 +69,7 @@ export interface SolicitudResponse {
     | SolicitudConDetalles
     | SolicitudConDetalles[]
     | null;
+  total?: number;
   message?: string;
   error?: string;
 }

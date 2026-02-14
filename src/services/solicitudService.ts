@@ -10,12 +10,23 @@ export class SolicitudService {
   /**
    * Obtiene lista de todas las solicitudes
    */
-  static async listarSolicitudes(): Promise<SolicitudResponse> {
+  static async listarSolicitudes(
+    q?: string,
+    page?: number,
+    pageSize?: number,
+    filtro?: "pagadas" | "impagas" | "pendientes",
+  ): Promise<SolicitudResponse> {
     try {
-      const solicitudes = await SolicitudRepository.getAllSolicitudes();
+      const result = await SolicitudRepository.getAllSolicitudes(
+        q,
+        page,
+        pageSize,
+        filtro,
+      );
       return {
         success: true,
-        data: solicitudes,
+        data: result.data,
+        total: result.total,
       };
     } catch (error: any) {
       return {

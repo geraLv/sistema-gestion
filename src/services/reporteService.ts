@@ -17,6 +17,12 @@ export class ReporteService {
     return ReporteRepository.getRecibosMesData(mes, localidadId);
   }
 
+  static async getRecibosSolicitudPagados(
+    idsolicitud: number,
+  ): Promise<ReciboCuotaData[]> {
+    return ReporteRepository.getRecibosSolicitudPagadosData(idsolicitud);
+  }
+
   static async getSolicitudesReporte(
     estado: "impagas" | "pagas" | "bajas",
     mes: string,
@@ -56,6 +62,18 @@ export class ReporteService {
         doc.addPage();
       }
       doc.fontSize(10).text(`Mes: ${mes}`, { align: "right" });
+      this.renderRecibo(doc, recibo);
+    });
+  }
+
+  static renderRecibosSolicitudPagados(
+    doc: typeof PDFDocument,
+    recibos: ReciboCuotaData[],
+  ): void {
+    recibos.forEach((recibo, index) => {
+      if (index > 0) {
+        doc.addPage();
+      }
       this.renderRecibo(doc, recibo);
     });
   }

@@ -30,6 +30,7 @@ export class AuditRepository {
     });
 
     if (query.entity) q = q.eq("entity", query.entity);
+    if (query.entity_id) q = q.eq("entity_id", query.entity_id);
     if (query.action) q = q.eq("action", query.action);
     if (query.actor)
       q = q.ilike("actor_username", `%${query.actor}%`);

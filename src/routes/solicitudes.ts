@@ -16,11 +16,43 @@ const getRequestMeta = (req: Request) => ({
  */
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const result = await SolicitudService.listarSolicitudes();
+    const q = typeof req.query.q === "string" ? req.query.q : undefined;
+    const filtro = req.query.filtro as
+      | "pagadas"
+      | "impagas"
+      | "pendientes"
+      | undefined;
+    const page = req.query.page ? Number(req.query.page) : undefined;
+    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : undefined;
+
+    if (page !== undefined && (!Number.isFinite(page) || page <= 0)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "page inválido" });
+    }
+    if (
+      pageSize !== undefined &&
+      (!Number.isFinite(pageSize) || pageSize <= 0)
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, error: "pageSize inválido" });
+    }
+
+    const result = await SolicitudService.listarSolicitudes(
+      q,
+      page,
+      pageSize,
+      filtro,
+    );
     if (!result.success) {
       return res.status(400).json({ success: false, error: result.error });
     }
-    res.json({ success: true, data: result.data || [] });
+    res.json({
+      success: true,
+      data: result.data || [],
+      total: result.total ?? null,
+    });
   } catch (error: any) {
     res.status(500).json({
       success: false,

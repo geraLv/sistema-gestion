@@ -141,6 +141,7 @@ router.get("/audit", async (req: Request, res: Response) => {
   try {
     const logs = await AuditRepository.listLogs({
       entity: req.query.entity as string | undefined,
+      entity_id: req.query.entity_id as string | undefined,
       action: req.query.action as string | undefined,
       actor: req.query.actor as string | undefined,
       date_from: req.query.date_from as string | undefined,

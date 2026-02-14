@@ -103,8 +103,13 @@ export class CuotaService {
   /**
    * Obtener cuotas con filtro
    */
-  static async obtenerCuotas(filtro?: "pagadas" | "impagas" | "vencidas") {
-    return CuotaRepository.getCuotasWithDetails(filtro);
+  static async obtenerCuotas(
+    filtro?: "pagadas" | "impagas" | "vencidas" | "pendientes",
+    q?: string,
+    page?: number,
+    pageSize?: number,
+  ) {
+    return CuotaRepository.getCuotasWithDetails(filtro, q, page, pageSize);
   }
 
   /**

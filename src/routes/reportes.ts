@@ -48,6 +48,36 @@ router.post("/recibos/cuota", async (req, res) => {
   doc.end();
 });
 
+router.get("/recibos/solicitud/:idsolicitud", async (req, res) => {
+  const idsolicitud = Number(req.params.idsolicitud);
+
+  if (!Number.isFinite(idsolicitud) || idsolicitud <= 0) {
+    return res.status(400).json({
+      success: false,
+      error: "idsolicitud inválido",
+    });
+  }
+
+  const recibos = await ReporteService.getRecibosSolicitudPagados(idsolicitud);
+  if (!recibos || recibos.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: "No hay recibos pagados para la solicitud",
+    });
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `inline; filename=\"recibos-solicitud-${idsolicitud}.pdf\"`,
+  );
+
+  const doc = new PDFDocument({ size: "A4", margin: 40 });
+  doc.pipe(res);
+  ReporteService.renderRecibosSolicitudPagados(doc, recibos);
+  doc.end();
+});
+
 router.get("/recibos/mes", async (req, res) => {
   const mes = getMesFromQuery(String(req.query?.mes || ""));
   if (!isValidMes(mes)) {

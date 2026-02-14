@@ -24,16 +24,23 @@ export class CuotaRepository {
    * Obtiene cuotas con información de solicitud y cliente
    */
   static async getCuotasWithDetails(
-    filtro?: "pagadas" | "impagas" | "vencidas",
-  ): Promise<CuotaWithSolicitud[]> {
+    filtro?: "pagadas" | "impagas" | "vencidas" | "pendientes",
+    q?: string,
+    page?: number,
+    pageSize?: number,
+  ): Promise<{ data: CuotaWithSolicitud[]; total: number }> {
     let query = supabase
       .from("cuotas")
       .select(
         `
         idcuota, relasolicitud, nrocuota, importe, vencimiento, estado, fecha,
-        solicitud:relasolicitud(nrosolicitud, idsolicitud),
-        cliente:relasolicitud(*)
+        solicitud:relasolicitud(
+          nrosolicitud,
+          idsolicitud,
+          cliente:relacliente(appynom, dni)
+        )
       `,
+        { count: "exact" },
       )
       .order("vencimiento", { ascending: true });
 
@@ -44,16 +51,128 @@ export class CuotaRepository {
     } else if (filtro === "vencidas") {
       const hoy = new Date().toISOString().split("T")[0];
       query = query.eq("estado", 0).lt("vencimiento", hoy);
+    } else if (filtro === "pendientes") {
+      query = query.not("estado", "in", "(0,2)");
     }
 
-    const { data, error } = await query;
+    const queryTerm = q?.trim();
+    if (queryTerm) {
+      const ids = await this.searchSolicitudIds(queryTerm);
+      if (ids.length === 0) {
+        return { data: [], total: 0 };
+      }
+      query = query.in("relasolicitud", ids);
+    }
+
+    const size = pageSize && pageSize > 0 ? pageSize : undefined;
+    const currentPage = page && page > 0 ? page : 1;
+    if (size) {
+      const from = (currentPage - 1) * size;
+      const to = from + size - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) {
       console.error("Error fetching cuotas:", error.message);
       throw new Error(`Error al obtener cuotas: ${error.message}`);
     }
 
-    return data as CuotaWithSolicitud[];
+    return { data: (data as CuotaWithSolicitud[]) || [], total: count || 0 };
+  }
+
+  private static async searchSolicitudIds(query: string): Promise<number[]> {
+    const q = query.trim();
+    if (!q) return [];
+
+    const ids = new Set<number>();
+    const numeric = Number(q);
+    if (Number.isFinite(numeric)) {
+      const { data: nroData, error: nroError } = await supabase
+        .from("solicitud")
+        .select("idsolicitud")
+        .eq("nrosolicitud", numeric)
+        .limit(200);
+
+      if (nroError) {
+        throw new Error(`Error buscando solicitudes: ${nroError.message}`);
+      }
+
+      (nroData || []).forEach((row: any) => {
+        if (Number.isFinite(row.idsolicitud)) ids.add(row.idsolicitud);
+      });
+    } else {
+      const { data: nroData, error: nroError } = await supabase
+        .from("solicitud")
+        .select("idsolicitud")
+        .ilike("nrosolicitud", `%${q}%`)
+        .limit(200);
+
+      if (nroError) {
+        if (nroError.code !== "42883") {
+          throw new Error(`Error buscando solicitudes: ${nroError.message}`);
+        }
+      } else {
+        (nroData || []).forEach((row: any) => {
+          if (Number.isFinite(row.idsolicitud)) ids.add(row.idsolicitud);
+        });
+      }
+    }
+
+    const clienteIds = new Set<number>();
+    const { data: clientesPorNombre, error: clientesNombreError } =
+      await supabase
+        .from("cliente")
+        .select("idcliente")
+        .ilike("appynom", `%${q}%`)
+        .limit(200);
+
+    if (clientesNombreError) {
+      throw new Error(
+        `Error buscando clientes por nombre: ${clientesNombreError.message}`,
+      );
+    }
+
+    (clientesPorNombre || []).forEach((row: any) => {
+      if (Number.isFinite(row.idcliente)) clienteIds.add(row.idcliente);
+    });
+
+    if (Number.isFinite(numeric)) {
+      const { data: clientesPorDni, error: clientesDniError } = await supabase
+        .from("cliente")
+        .select("idcliente")
+        .eq("dni", q)
+        .limit(200);
+
+      if (clientesDniError) {
+        throw new Error(
+          `Error buscando clientes por DNI: ${clientesDniError.message}`,
+        );
+      }
+
+      (clientesPorDni || []).forEach((row: any) => {
+        if (Number.isFinite(row.idcliente)) clienteIds.add(row.idcliente);
+      });
+    }
+
+    if (clienteIds.size > 0) {
+      const { data: solPorCliente, error: solError } = await supabase
+        .from("solicitud")
+        .select("idsolicitud")
+        .in("relacliente", Array.from(clienteIds))
+        .limit(500);
+
+      if (solError) {
+        throw new Error(`Error buscando solicitudes: ${solError.message}`);
+      }
+
+      (solPorCliente || []).forEach((row: any) => {
+        if (Number.isFinite(row.idsolicitud)) ids.add(row.idsolicitud);
+      });
+    }
+
+    return Array.from(ids);
   }
 
   /**

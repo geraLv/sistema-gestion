@@ -15,10 +15,29 @@ const getRequestMeta = (req: Request) => ({
  * Obtiene lista de todos los clientes
  */
 router.get("/", async (req: Request, res: Response) => {
-  const result = await ClienteService.listarClientes();
+  const q = typeof req.query.q === "string" ? req.query.q : undefined;
+  const page = req.query.page ? Number(req.query.page) : undefined;
+  const pageSize = req.query.pageSize ? Number(req.query.pageSize) : undefined;
+
+  if (page !== undefined && (!Number.isFinite(page) || page <= 0)) {
+    return res
+      .status(400)
+      .json({ success: false, error: "page inválido" });
+  }
+  if (pageSize !== undefined && (!Number.isFinite(pageSize) || pageSize <= 0)) {
+    return res
+      .status(400)
+      .json({ success: false, error: "pageSize inválido" });
+  }
+
+  const result = await ClienteService.listarClientes(q, page, pageSize);
 
   if (result.success) {
-    return res.json({ success: true, data: result.data });
+    return res.json({
+      success: true,
+      data: result.data,
+      total: result.total ?? null,
+    });
   } else {
     return res.status(500).json({ success: false, error: result.error });
   }

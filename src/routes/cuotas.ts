@@ -26,13 +26,37 @@ cuotasRouter.get("/", async (req: Request, res: Response) => {
       | "pagadas"
       | "impagas"
       | "vencidas"
+      | "pendientes"
       | undefined;
+    const q = typeof req.query.q === "string" ? req.query.q : undefined;
+    const page = req.query.page ? Number(req.query.page) : undefined;
+    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : undefined;
 
-    const cuotas = await CuotaService.obtenerCuotas(filtro);
+    if (page !== undefined && (!Number.isFinite(page) || page <= 0)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "page inválido" });
+    }
+    if (
+      pageSize !== undefined &&
+      (!Number.isFinite(pageSize) || pageSize <= 0)
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, error: "pageSize inválido" });
+    }
+
+    const cuotas = await CuotaService.obtenerCuotas(
+      filtro,
+      q,
+      page,
+      pageSize,
+    );
 
     res.json({
       success: true,
-      data: cuotas,
+      data: cuotas.data,
+      total: cuotas.total,
     });
   } catch (error) {
     res.status(500).json({

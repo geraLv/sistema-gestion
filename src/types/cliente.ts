@@ -33,6 +33,7 @@ export interface UpdateClienteDTO {
 export interface ClienteResponse {
   success: boolean;
   data?: Cliente | Cliente[] | null;
+  total?: number;
   message?: string;
   error?: string;
 }

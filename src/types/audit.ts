@@ -23,6 +23,7 @@ export interface AuditLogCreate {
 
 export interface AuditQuery {
   entity?: string;
+  entity_id?: string | number;
   action?: string;
   actor?: string;
   date_from?: string;

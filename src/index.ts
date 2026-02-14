@@ -13,6 +13,7 @@ import vendedoresRouter from "./routes/vendedores";
 import productosRouter from "./routes/productos";
 import reportesRouter from "./routes/reportes";
 import adminRouter from "./routes/admin";
+import dashboardRouter from "./routes/dashboard";
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use("/api/vendedores", authenticateToken, vendedoresRouter);
 app.use("/api/productos", authenticateToken, productosRouter);
 app.use("/api/reportes", authenticateToken, reportesRouter);
 app.use("/api/admin", authenticateToken, requireRole("admin"), adminRouter);
+app.use("/api/dashboard", authenticateToken, dashboardRouter);
 
 const port = process.env.PORT || 4000;
 
