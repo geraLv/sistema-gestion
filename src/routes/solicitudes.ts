@@ -237,12 +237,12 @@ router.put("/:id", async (req: Request, res: Response) => {
 router.post("/:id/cuotas", async (req: Request, res: Response) => {
   try {
     const idsolicitud = parseInt(req.params.id, 10);
-    const { cantidadNueva } = req.body;
-
+    const { cantCuotas } = req.body;
+    console.log("cantidadNueva", cantCuotas);
     const before = await SolicitudService.obtenerSolicitud(idsolicitud);
     const result = await SolicitudService.adicionarCuotas(
       idsolicitud,
-      parseInt(cantidadNueva, 10),
+      parseInt(cantCuotas, 10),
     );
     if (!result.success) {
       return res.status(400).json({ success: false, error: result.error });

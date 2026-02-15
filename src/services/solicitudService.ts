@@ -253,6 +253,7 @@ export class SolicitudService {
         };
       }
 
+      console.log("paso el coso", cantidadNueva);
       if (!Number.isInteger(cantidadNueva) || cantidadNueva <= 0) {
         return {
           success: false,
@@ -268,6 +269,7 @@ export class SolicitudService {
           error: "Solicitud no encontrada",
         };
       }
+
 
       // Agregar cuotas
       await SolicitudRepository.adicionarCuotas(idsolicitud, cantidadNueva);

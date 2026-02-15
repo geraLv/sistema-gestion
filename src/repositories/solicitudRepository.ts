@@ -391,7 +391,7 @@ export class SolicitudRepository {
     }
 
     const { error } = await supabase.from("cuotas").insert(cuotasArray);
-
+    console.log("erro:", error)
     if (error) {
       console.error("Error creating cuotas:", error.message);
       throw new Error(`Error al crear cuotas: ${error.message}`);
@@ -473,6 +473,7 @@ export class SolicitudRepository {
       .from("cuotas")
       .insert(cuotasArray);
 
+    console.log("errorInsert:", errorInsert);
     if (errorInsert) {
       throw new Error(`Error al insertar cuotas: ${errorInsert.message}`);
     }
@@ -484,6 +485,7 @@ export class SolicitudRepository {
       .update({ cantidadcuotas: nuevaCant })
       .eq("idsolicitud", idsolicitud);
 
+    console.log("errorUpdate:", errorUpdate);
     if (errorUpdate) {
       throw new Error(
         `Error al actualizar cantidadcuotas: ${errorUpdate.message}`,
