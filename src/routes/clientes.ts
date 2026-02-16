@@ -96,7 +96,7 @@ router.get("/:id", async (req: Request, res: Response) => {
  * Opcionalmente: idcliente (si viene, es una actualización)
  */
 router.post("/", async (req: Request, res: Response) => {
-  const { idcliente, appynom, dni, direccion, telefono, selectLocalidades } =
+  const { idcliente, appynom, dni, direccion, telefono, email, selectLocalidades } =
     req.body;
 
   console.log(idcliente);
@@ -119,6 +119,7 @@ router.post("/", async (req: Request, res: Response) => {
       dni,
       direccion,
       telefono,
+      email,
       selectLocalidades: parseInt(selectLocalidades, 10),
     };
 
@@ -149,6 +150,7 @@ router.post("/", async (req: Request, res: Response) => {
       dni,
       direccion,
       telefono,
+      email,
       selectLocalidades: parseInt(selectLocalidades, 10),
     };
 
@@ -170,6 +172,38 @@ router.post("/", async (req: Request, res: Response) => {
     } else {
       return res.status(400).json({ success: false, error: result.error });
     }
+  }
+});
+
+/**
+ * DELETE /api/clientes/:id
+ * Elimina un cliente por ID
+ */
+router.delete("/:id", async (req: Request, res: Response) => {
+  const idcliente = parseInt(req.params.id, 10);
+
+  if (isNaN(idcliente)) {
+    return res
+      .status(400)
+      .json({ success: false, error: "ID de cliente inválido" });
+  }
+
+  const before = await ClienteService.obtenerCliente(idcliente);
+  const result = await ClienteService.eliminarCliente(idcliente);
+
+  if (result.success) {
+    await AuditService.log({
+      actor: (req as any).user,
+      action: "DELETE",
+      entity: "clientes",
+      entityId: idcliente,
+      before: before.data || before,
+      after: null,
+      ...getRequestMeta(req),
+    });
+    return res.json({ success: true, message: result.message });
+  } else {
+    return res.status(400).json({ success: false, error: result.error });
   }
 });
 

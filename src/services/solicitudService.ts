@@ -154,10 +154,11 @@ export class SolicitudService {
 
       // Crear cuotas automáticamente
       try {
+        const valorCuota = dto.totalapagar / dto.selectCuotas;
         await SolicitudRepository.createCuotas(
           solicitud.idsolicitud,
           dto.selectCuotas,
-          dto.monto,
+          valorCuota,
         );
       } catch (error: any) {
         // Si falla crear cuotas, intentar limpiar la solicitud

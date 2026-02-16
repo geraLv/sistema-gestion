@@ -4,6 +4,7 @@ export interface Cliente {
   dni: string;
   direccion: string;
   telefono: string;
+  email?: string;
   relalocalidad: number;
   condicion: number;
   fechalta?: string;
@@ -18,6 +19,7 @@ export interface CreateClienteDTO {
   dni: string;
   direccion: string;
   telefono: string;
+  email?: string;
   selectLocalidades: number;
 }
 
@@ -27,6 +29,7 @@ export interface UpdateClienteDTO {
   dni: string;
   direccion: string;
   telefono: string;
+  email?: string;
   selectLocalidades: number;
 }
 

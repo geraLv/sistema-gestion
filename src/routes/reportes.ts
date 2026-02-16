@@ -48,6 +48,38 @@ router.post("/recibos/cuota", async (req, res) => {
   doc.end();
 });
 
+router.post("/recibos/multiples", async (req, res) => {
+  const idcuotas = req.body?.idcuotas as number[];
+
+  console.log(idcuotas);
+
+  if (!Array.isArray(idcuotas) || idcuotas.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "idcuotas debe ser un arreglo no vacío de números",
+    });
+  }
+
+  const recibos = await ReporteService.getRecibosMultiples(idcuotas);
+  if (!recibos || recibos.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: "No se encontraron recibos para los IDs proporcionados",
+    });
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `inline; filename=\"recibos-multiples.pdf\"`,
+  );
+
+  const doc = new PDFDocument({ size: "A4", margin: 40 });
+  doc.pipe(res);
+  ReporteService.renderRecibosMultiples(doc, recibos);
+  doc.end();
+});
+
 router.get("/recibos/solicitud/:idsolicitud", async (req, res) => {
   const idsolicitud = Number(req.params.idsolicitud);
 

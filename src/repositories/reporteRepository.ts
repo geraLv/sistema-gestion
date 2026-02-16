@@ -11,7 +11,7 @@ export class ReporteRepository {
       .from("cuotas")
       .select(
         `
-        idcuota, nrocuota, importe, vencimiento,
+        idcuota, nrocuota, importe, vencimiento, estado,
         solicitud:relasolicitud(
           nrosolicitud, estado,
           cliente:relacliente(appynom, dni, direccion, telefono, localidad:relalocalidad(nombre)),
@@ -20,16 +20,22 @@ export class ReporteRepository {
       `,
       )
       .eq("idcuota", idcuota)
-      .single();
+      .limit(1);
 
     if (error) {
       console.error("Error fetching recibo cuota:", error.message);
       return null;
     }
 
-    const solicitud = Array.isArray((data as any).solicitud)
-      ? (data as any).solicitud[0]
-      : (data as any).solicitud;
+    if (!data || data.length === 0) {
+      console.warn(`[ReporteService] Cuota ${idcuota} no encontrada (0 filas).`);
+      return null;
+    }
+
+    const row = data[0];
+    const solicitud = Array.isArray((row as any).solicitud)
+      ? (row as any).solicitud[0]
+      : (row as any).solicitud;
     const cliente = Array.isArray(solicitud?.cliente)
       ? solicitud.cliente[0]
       : solicitud?.cliente;
@@ -40,15 +46,26 @@ export class ReporteRepository {
       ? cliente.localidad[0]
       : cliente?.localidad;
 
+    // Check payment status with logging
+    if ((row as any).estado !== 2) {
+      console.warn(
+        `[ReporteService] Cuota ${idcuota} no está pagada. Estado: ${(row as any).estado}`,
+      );
+    }
+
     if (!solicitud || !cliente || !producto) {
+      console.warn(
+        `[ReporteService] Datos incompletos para cuota ${idcuota}:`,
+        { solicitud: !!solicitud, cliente: !!cliente, producto: !!producto },
+      );
       return null;
     }
 
     return {
-      idcuota: (data as any).idcuota,
-      nrocuota: (data as any).nrocuota,
-      importe: (data as any).importe,
-      vencimiento: (data as any).vencimiento,
+      idcuota: (row as any).idcuota,
+      nrocuota: (row as any).nrocuota,
+      importe: (row as any).importe,
+      vencimiento: (row as any).vencimiento,
       nrosolicitud: solicitud.nrosolicitud,
       cliente: {
         appynom: cliente.appynom,
@@ -61,6 +78,87 @@ export class ReporteRepository {
         descripcion: producto.descripcion,
       },
     };
+  }
+
+  static async getRecibosMultiplesData(
+    idcuotas: number[],
+  ): Promise<ReciboCuotaData[]> {
+    if (!idcuotas || idcuotas.length === 0) return [];
+
+    console.log(`[ReporteRepository] Fetching multiples: ${idcuotas.join(",")}`);
+
+    const { data, error } = await supabase
+      .from("cuotas")
+      .select(
+        `
+        idcuota, nrocuota, importe, vencimiento, estado,
+        solicitud:relasolicitud(
+          nrosolicitud, estado,
+          cliente:relacliente(appynom, dni, direccion, telefono, localidad:relalocalidad(nombre)),
+          producto:relaproducto(descripcion)
+        )
+      `,
+      )
+      .in("idcuota", idcuotas)
+      .order("nrocuota", { ascending: true });
+
+    console.log(data, error);
+    if (error) {
+      console.error("Error fetching recibos multiples:", error.message);
+      return [];
+    }
+
+    return (data || [])
+      .map((row: any) => {
+        // Log status if not 2
+        if (row.estado !== 2) {
+          console.warn(
+            `[ReporteService] Multiple: Cuota ${row.idcuota} omitida. Estado: ${row.estado}`,
+          );
+          // If strict mode, return null. User implies they WANT it to work if paid.
+          // return null;
+        }
+
+        const solicitud = Array.isArray(row.solicitud)
+          ? row.solicitud[0]
+          : row.solicitud;
+        const cliente = Array.isArray(solicitud?.cliente)
+          ? solicitud.cliente[0]
+          : solicitud?.cliente;
+        const producto = Array.isArray(solicitud?.producto)
+          ? solicitud.producto[0]
+          : solicitud?.producto;
+        const localidad = Array.isArray(cliente?.localidad)
+          ? cliente.localidad[0]
+          : cliente?.localidad;
+
+        if (!solicitud || !cliente || !producto) {
+          console.warn(
+            `[ReporteService] Multiple: Datos incompletos para cuota ${row.idcuota}`,
+            { solicitud: !!solicitud, cliente: !!cliente, producto: !!producto },
+          );
+          return null;
+        }
+
+        return {
+          idcuota: row.idcuota,
+          nrocuota: row.nrocuota,
+          importe: row.importe,
+          vencimiento: row.vencimiento,
+          nrosolicitud: solicitud.nrosolicitud,
+          cliente: {
+            appynom: cliente.appynom,
+            dni: cliente.dni,
+            direccion: cliente.direccion,
+            telefono: cliente.telefono,
+            localidad: localidad?.nombre || "",
+          },
+          producto: {
+            descripcion: producto.descripcion,
+          },
+        } as ReciboCuotaData;
+      })
+      .filter(Boolean) as ReciboCuotaData[];
   }
 
   static async getRecibosSolicitudPagadosData(
@@ -210,22 +308,22 @@ export class ReporteRepository {
     }
 
     return filtrados.map((r) => ({
-        idcuota: r.idcuota,
-        nrocuota: r.nrocuota,
-        importe: r.importe,
-        vencimiento: r.vencimiento,
-        nrosolicitud: r.nrosolicitud,
-        cliente: {
-          appynom: r.cliente.appynom,
-          dni: r.cliente.dni,
-          direccion: r.cliente.direccion,
-          telefono: r.cliente.telefono,
-          localidad: r.cliente.localidad,
-        },
-        producto: {
-          descripcion: r.producto.descripcion,
-        },
-      }));
+      idcuota: r.idcuota,
+      nrocuota: r.nrocuota,
+      importe: r.importe,
+      vencimiento: r.vencimiento,
+      nrosolicitud: r.nrosolicitud,
+      cliente: {
+        appynom: r.cliente.appynom,
+        dni: r.cliente.dni,
+        direccion: r.cliente.direccion,
+        telefono: r.cliente.telefono,
+        localidad: r.cliente.localidad,
+      },
+      producto: {
+        descripcion: r.producto.descripcion,
+      },
+    }));
   }
 
   static async getSolicitudesReporteData(

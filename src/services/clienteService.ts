@@ -186,6 +186,41 @@ export class ClienteService {
   }
 
   /**
+   * Elimina un cliente por ID
+   */
+  static async eliminarCliente(idcliente: number): Promise<ClienteResponse> {
+    try {
+      if (!Number.isInteger(idcliente) || idcliente <= 0) {
+        return {
+          success: false,
+          error: "ID de cliente inválido",
+        };
+      }
+
+      // Verificar que el cliente existe
+      const clienteExistente = await ClienteRepository.getClienteById(idcliente);
+      if (!clienteExistente) {
+        return {
+          success: false,
+          error: "Cliente no encontrado",
+        };
+      }
+
+      await ClienteRepository.deleteCliente(idcliente);
+
+      return {
+        success: true,
+        message: "Cliente eliminado exitosamente",
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
    * Valida los datos del cliente
    */
   private static validateClienteData(data: any): {

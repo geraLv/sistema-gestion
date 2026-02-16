@@ -186,14 +186,13 @@ export class CuotaRepository {
     if (!cuotaActual) {
       throw new Error("Cuota no encontrada");
     }
-
     // Actualizar cuota
     const { data: cuotaActualizada, error: errorCuota } = await supabase
       .from("cuotas")
       .update({
         estado: 2,
         fecha: hoy,
-        saldoanterior: cuotaActual.importe,
+        saldoanterior: Math.round(cuotaActual.importe),
       })
       .eq("idcuota", idcuota)
       .select()

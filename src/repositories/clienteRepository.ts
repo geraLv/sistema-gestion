@@ -24,6 +24,7 @@ export class ClienteRepository {
         dni,
         direccion,
         telefono,
+        email,
         relalocalidad,
         condicion,
         fechalta,
@@ -76,6 +77,7 @@ export class ClienteRepository {
         dni,
         direccion,
         telefono,
+        email,
         relalocalidad,
         condicion,
         fechalta,
@@ -105,6 +107,7 @@ export class ClienteRepository {
           dni: dto.dni,
           direccion: dto.direccion,
           telefono: dto.telefono,
+          email: dto.email,
           relalocalidad: dto.selectLocalidades,
           condicion: 1, // activo por defecto
           fechalta: new Date().toISOString(),
@@ -132,6 +135,7 @@ export class ClienteRepository {
         dni: dto.dni,
         direccion: dto.direccion,
         telefono: dto.telefono,
+        email: dto.email,
         relalocalidad: dto.selectLocalidades,
       })
       .eq("idcliente", dto.idcliente)
@@ -159,6 +163,7 @@ export class ClienteRepository {
         dni,
         direccion,
         telefono,
+        email,
         relalocalidad,
         condicion,
         fechalta,
@@ -198,5 +203,22 @@ export class ClienteRepository {
     }
 
     return (count || 0) > 0;
+  }
+
+  /**
+   * Elimina un cliente por ID
+   */
+  static async deleteCliente(id: number): Promise<void> {
+    const { error } = await supabase.from("cliente").delete().eq("idcliente", id);
+
+    if (error) {
+      console.error("Error deleting cliente:", error);
+      if (error.code === "23503") {
+        throw new Error(
+          "No se puede eliminar el cliente porque tiene registros asociados (solicitudes, cuotas, etc.).",
+        );
+      }
+      throw new Error(`Error al eliminar cliente: ${error.message}`);
+    }
   }
 }

@@ -440,7 +440,7 @@ export class SolicitudRepository {
     // Obtén monto de la solicitud
     const { data: solicitud, error: errorSol } = await supabase
       .from("solicitud")
-      .select("monto, cantidadcuotas")
+      .select("monto, cantidadcuotas, totalapagar")
       .eq("idsolicitud", idsolicitud)
       .single();
 
@@ -448,7 +448,10 @@ export class SolicitudRepository {
       throw new Error(`Error al obtener solicitud: ${errorSol.message}`);
     }
 
-    const monto = solicitud.monto;
+    // Obtén monto de la última cuota para mantener consistencia
+    const valorCuota = ultimaCuota.importe;
+
+    // Calcular fechas
     const proxNrocuota = ultimaCuota.nrocuota + 1;
     let proxVencimiento = new Date(ultimaCuota.vencimiento);
 
@@ -460,7 +463,7 @@ export class SolicitudRepository {
       cuotasArray.push({
         relasolicitud: idsolicitud,
         nrocuota: proxNrocuota + i,
-        importe: monto,
+        importe: valorCuota,
         vencimiento: proxVencimiento.toISOString().split("T")[0],
         estado: 0,
         saldoanterior: 0,
@@ -473,22 +476,39 @@ export class SolicitudRepository {
       .from("cuotas")
       .insert(cuotasArray);
 
-    console.log("errorInsert:", errorInsert);
     if (errorInsert) {
       throw new Error(`Error al insertar cuotas: ${errorInsert.message}`);
     }
 
-    // Actualiza cantidadcuotas en solicitud
+    // Recalcular totales
+    const montoAgregado = valorCuota * cantidadNueva;
+    const nuevoTotalAPagar = (solicitud.totalapagar || 0) + montoAgregado;
+
+    // Recalcular porcentaje
+    // Necesitamos el total abonado actual
+    const { data: solActual } = await supabase
+      .from("solicitud")
+      .select("totalabonado")
+      .eq("idsolicitud", idsolicitud)
+      .single();
+
+    const totalAbonado = solActual?.totalabonado || 0;
+    const nuevoPorcentaje = (totalAbonado * 100) / nuevoTotalAPagar;
+
+    // Actualiza solicitud
     const nuevaCant = solicitud.cantidadcuotas + cantidadNueva;
     const { error: errorUpdate } = await supabase
       .from("solicitud")
-      .update({ cantidadcuotas: nuevaCant })
+      .update({
+        cantidadcuotas: nuevaCant,
+        totalapagar: nuevoTotalAPagar,
+        porcentajepagado: Math.round(nuevoPorcentaje * 100) / 100
+      })
       .eq("idsolicitud", idsolicitud);
 
-    console.log("errorUpdate:", errorUpdate);
     if (errorUpdate) {
       throw new Error(
-        `Error al actualizar cantidadcuotas: ${errorUpdate.message}`,
+        `Error al actualizar solicitud: ${errorUpdate.message}`,
       );
     }
   }
