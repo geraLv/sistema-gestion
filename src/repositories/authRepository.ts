@@ -1,6 +1,7 @@
 import { supabase } from "../db";
 import { User } from "../types/auth";
 import * as bcrypt from "bcryptjs";
+import logger from "../utils/logger";
 
 interface UserPublic {
   iduser: number;
@@ -25,7 +26,7 @@ export class AuthRepository {
       .single();
 
     if (error && error.code !== "PGRST116") {
-      console.error("Error fetching user:", error.message);
+      logger.error("Error fetching user by username", { error: error.message, usuario });
       throw new Error(`Error al obtener usuario: ${error.message}`);
     }
 
@@ -43,7 +44,7 @@ export class AuthRepository {
       .single();
 
     if (error && error.code !== "PGRST116") {
-      console.error("Error fetching user by id:", error.message);
+      logger.error("Error fetching user by ID", { error: error.message, iduser });
       throw new Error(`Error al obtener usuario: ${error.message}`);
     }
 
@@ -60,7 +61,7 @@ export class AuthRepository {
       .order("iduser", { ascending: true });
 
     if (error) {
-      console.error("Error fetching users:", error.message);
+      logger.error("Error fetching all users", { error: error.message });
       throw new Error(`Error al obtener usuarios: ${error.message}`);
     }
     return (data as UserPublic[]) || [];
@@ -88,7 +89,6 @@ export class AuthRepository {
           password: passwordHash,
           nombre: nombre || "",
           email: email || "",
-          estado: status, // compat
           status: status,
           role,
           fechacreacion: new Date().toISOString(),
@@ -98,7 +98,7 @@ export class AuthRepository {
       .single();
 
     if (error) {
-      console.error("Error creating user:", error.message);
+      logger.error("Error creating user", { error: error.message, usuario });
       throw new Error(`Error al crear usuario: ${error.message}`);
     }
 
@@ -120,7 +120,7 @@ export class AuthRepository {
       .eq("iduser", iduser);
 
     if (error) {
-      console.error("Error updating password:", error.message);
+      logger.error("Error updating password", { error: error.message, iduser });
       throw new Error(`Error al actualizar contraseña: ${error.message}`);
     }
   }

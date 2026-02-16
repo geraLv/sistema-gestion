@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { AuthService } from "../services/authService";
 import { AuditService } from "../services/auditService";
 import { LoginDTO, ChangePasswordDTO } from "../types/auth";
+import { UnauthorizedError, ForbiddenError } from "../utils/errors";
 
 const router = Router();
 
@@ -52,10 +53,10 @@ export const requireRole = (role: "admin" | "user") => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
-      return res.status(401).json({ success: false, error: "No autenticado" });
+      throw new UnauthorizedError("No autenticado");
     }
     if (user.role !== role) {
-      return res.status(403).json({ success: false, error: "Sin permisos" });
+      throw new ForbiddenError(`Requiere rol: ${role}`);
     }
     next();
   };

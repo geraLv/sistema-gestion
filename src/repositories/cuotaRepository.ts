@@ -384,4 +384,80 @@ export class CuotaRepository {
       montoImpago,
     };
   }
+
+  /**
+   * Elimina una cuota y actualiza la solicitud relacionada
+   */
+  static async deleteCuota(idcuota: number): Promise<void> {
+    // 1. Obtener la cuota y validar
+    const cuota = await this.getCuotaById(idcuota);
+    if (!cuota) {
+      throw new Error("Cuota no encontrada");
+    }
+
+    // 2. Validar que no esté pagada
+    if (cuota.estado === 2) {
+      throw new Error("No se puede eliminar una cuota pagada");
+    }
+
+    // 3. Verificar que sea la última cuota de la solicitud
+    const { data: ultimaCuota, error: errorUltima } = await supabase
+      .from("cuotas")
+      .select("nrocuota")
+      .eq("relasolicitud", cuota.relasolicitud)
+      .order("nrocuota", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (errorUltima || !ultimaCuota) {
+      throw new Error("Error al verificar cuota");
+    }
+
+    if (cuota.nrocuota !== ultimaCuota.nrocuota) {
+      throw new Error("Solo se puede eliminar la última cuota de la secuencia");
+    }
+
+    // 4. Verificar que quede al menos 1 cuota
+    const { count } = await supabase
+      .from("cuotas")
+      .select("idcuota", { count: "exact" })
+      .eq("relasolicitud", cuota.relasolicitud);
+
+    if ((count || 0) <= 1) {
+      throw new Error("No se puede eliminar la única cuota de la solicitud");
+    }
+
+    // 5. Eliminar la cuota
+    const { error: errorDelete } = await supabase
+      .from("cuotas")
+      .delete()
+      .eq("idcuota", idcuota);
+
+    if (errorDelete) {
+      throw new Error(`Error al eliminar cuota: ${errorDelete.message}`);
+    }
+
+    // 6. Actualizar solicitud
+    const { data: solicitud } = await supabase
+      .from("solicitud")
+      .select("cantidadcuotas, totalapagar, totalabonado")
+      .eq("idsolicitud", cuota.relasolicitud)
+      .single();
+
+    if (solicitud) {
+      const nuevaCantidad = solicitud.cantidadcuotas - 1;
+      const nuevoTotal = solicitud.totalapagar - cuota.importe;
+      const nuevoTotalAbonado = solicitud.totalabonado || 0;
+      const nuevoPorcentaje = nuevoTotal > 0 ? (nuevoTotalAbonado * 100) / nuevoTotal : 0;
+
+      await supabase
+        .from("solicitud")
+        .update({
+          cantidadcuotas: nuevaCantidad,
+          totalapagar: nuevoTotal,
+          porcentajepagado: Math.round(nuevoPorcentaje * 100) / 100,
+        })
+        .eq("idsolicitud", cuota.relasolicitud);
+    }
+  }
 }

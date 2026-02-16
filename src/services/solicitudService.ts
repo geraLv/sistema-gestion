@@ -393,20 +393,23 @@ export class SolicitudService {
       return { valid: false, error: "Producto inválido" };
     }
 
-    if (!data.monto || data.monto <= 0) {
+    if (data.monto !== undefined && data.monto <= 0) {
       return { valid: false, error: "Monto debe ser mayor a 0" };
     }
 
-    if (!data.totalapagar || data.totalapagar <= 0) {
+    if (data.totalapagar !== undefined && data.totalapagar <= 0) {
       return { valid: false, error: "Total a pagar debe ser mayor a 0" };
     }
 
-    if (!data.selectCuotas || data.selectCuotas <= 0) {
+    if (data.selectCuotas !== undefined && data.selectCuotas <= 0) {
       return { valid: false, error: "Cantidad de cuotas debe ser mayor a 0" };
     }
 
-    if (!data.nroSolicitud || data.nroSolicitud.trim().length === 0) {
-      return { valid: false, error: "Número de solicitud es requerido" };
+    if (data.nroSolicitud !== undefined) {
+      const nroStr = String(data.nroSolicitud || "");
+      if (nroStr.trim().length === 0) {
+        return { valid: false, error: "Número de solicitud no puede estar vacío" };
+      }
     }
 
     return { valid: true };

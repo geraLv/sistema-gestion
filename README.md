@@ -12,6 +12,39 @@ npm run dev
 
 El servidor estará disponible en `http://localhost:4000`
 
+## ⚙️ Configuración de Entorno
+
+**IMPORTANTE:** Debes configurar las variables de entorno antes de ejecutar el servidor.
+
+1. **Copiar el archivo de ejemplo:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Generar JWT secrets seguros:**
+   ```bash
+   # Genera un secret aleatorio de 64 bytes
+   node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+   ```
+   Copia el resultado y úsalo para `JWT_SECRET` y `JWT_REFRESH_SECRET` en tu `.env`
+
+3. **Configurar Supabase:**
+   - Obtén `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` desde tu dashboard de Supabase
+   - Actualiza estos valores en tu `.env`
+
+4. **Ajustar CORS (opcional):**
+   - Para desarrollo local, el valor por defecto funciona
+   - Para producción, actualiza `CORS_ORIGIN` con tu dominio frontend
+
+**Variables requeridas en `.env`:**
+- `SUPABASE_URL` - URL de tu proyecto Supabase
+- `SUPABASE_SERVICE_ROLE_KEY` - Service role key de Supabase
+- `JWT_SECRET` - Secret para tokens JWT (mínimo 32 caracteres)
+- `JWT_REFRESH_SECRET` - Secret para refresh tokens (mínimo 32 caracteres)
+- `PORT` - Puerto del servidor (default: 4000)
+- `CORS_ORIGIN` - Origen permitido para CORS
+
+
 ## Estructura del Proyecto
 
 ```

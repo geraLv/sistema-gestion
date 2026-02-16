@@ -380,4 +380,49 @@ cuotasRouter.put("/:idcuota/importe", async (req: Request, res: Response) => {
   }
 });
 
+
+/**
+ * DELETE /api/cuotas/:idcuota - Eliminar una cuota
+ */
+cuotasRouter.delete("/:idcuota", async (req: Request, res: Response) => {
+  try {
+    const { idcuota } = req.params;
+
+    if (!idcuota || isNaN(Number(idcuota))) {
+      return res.status(400).json({
+        success: false,
+        error: "ID de cuota inválido",
+      });
+    }
+
+    const before = await CuotaRepository.getCuotaById(Number(idcuota));
+
+    const resultado = await CuotaService.eliminarCuota(Number(idcuota));
+
+    if (!resultado.success) {
+      return res.status(400).json(resultado);
+    }
+
+    try {
+      await AuditService.log({
+        actor: (req as any).user,
+        action: "DELETE",
+        entity: "cuotas",
+        entityId: Number(idcuota),
+        before,
+        after: null,
+        ...getRequestMeta(req),
+      });
+    } catch (auditError) {
+      console.error("Audit log failed (delete cuota):", auditError);
+    }
+
+    res.json(resultado);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message,
+    });
+  }
+});
 export default cuotasRouter;

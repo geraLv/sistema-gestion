@@ -124,6 +124,28 @@ export class CuotaService {
       resumen,
     };
   }
+
+  /**
+   * Eliminar una cuota
+   */
+  static async eliminarCuota(idcuota: number): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string;
+  }> {
+    try {
+      await CuotaRepository.deleteCuota(idcuota);
+      return {
+        success: true,
+        message: "Cuota eliminada correctamente",
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
 }
 
 export class AdelantoService {

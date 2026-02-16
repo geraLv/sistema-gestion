@@ -3,6 +3,7 @@ import { AuthRepository } from "../repositories/authRepository";
 import { AuditService } from "../services/auditService";
 import { AuditRepository } from "../repositories/auditRepository";
 import { VendedorService } from "../services/referenciaService";
+import logger from "../utils/logger";
 
 const router = Router();
 
@@ -38,18 +39,23 @@ router.post("/users", async (req: Request, res: Response) => {
       status ?? 1,
     );
 
-    await AuditService.log({
-      actor: (req as any).user,
-      action: "CREATE",
-      entity: "app_user",
-      entityId: created.iduser,
-      before: null,
-      after: created,
-      ...getRequestMeta(req),
-    });
+    try {
+      await AuditService.log({
+        actor: (req as any).user,
+        action: "CREATE",
+        entity: "app_user",
+        entityId: created.iduser,
+        before: null,
+        after: created,
+        ...getRequestMeta(req),
+      });
+    } catch (auditError) {
+      logger.warn("Audit log failed for user creation", { error: auditError });
+    }
 
     res.status(201).json({ success: true, data: created });
   } catch (error: any) {
+    logger.error("Error creating user", { error: error.message, stack: error.stack });
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -178,18 +184,23 @@ router.post("/vendedores", async (req: Request, res: Response) => {
       Number(estado) || 1,
     );
 
-    await AuditService.log({
-      actor: (req as any).user,
-      action: "CREATE",
-      entity: "vendedor",
-      entityId: created.idvendedor,
-      before: null,
-      after: created,
-      ...getRequestMeta(req),
-    });
+    try {
+      await AuditService.log({
+        actor: (req as any).user,
+        action: "CREATE",
+        entity: "vendedor",
+        entityId: created.idvendedor,
+        before: null,
+        after: created,
+        ...getRequestMeta(req),
+      });
+    } catch (auditError) {
+      logger.warn("Audit log failed for vendedor creation", { error: auditError });
+    }
 
     res.status(201).json({ success: true, data: created });
   } catch (error: any) {
+    logger.error("Error creating vendedor", { error: error.message, stack: error.stack });
     res.status(500).json({ success: false, error: error.message });
   }
 });

@@ -1,4 +1,4 @@
-import * as jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { createHash } from "crypto";
 import { AuthRepository } from "../repositories/authRepository";
 import {
@@ -91,10 +91,10 @@ export class AuthService {
 
       const token = jwt.sign(payload, JWT_SECRET, {
         expiresIn: JWT_EXPIRES_IN,
-      });
+      } as jwt.SignOptions);
       const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, {
         expiresIn: JWT_REFRESH_EXPIRES_IN,
-      });
+      } as jwt.SignOptions);
       await AuthRepository.updateRefreshToken(
         user.iduser!,
         hashToken(refreshToken),
@@ -152,12 +152,12 @@ export class AuthService {
       }
 
       if (error.name === "JsonWebTokenError") {
-      return {
-        success: false,
-        valid: false,
-        error: "Token inválido",
-      };
-    }
+        return {
+          success: false,
+          valid: false,
+          error: "Token inválido",
+        };
+      }
 
       return {
         success: false,
@@ -315,10 +315,10 @@ export class AuthService {
 
       const newAccess = jwt.sign(payload, JWT_SECRET, {
         expiresIn: JWT_EXPIRES_IN,
-      });
+      } as jwt.SignOptions);
       const newRefresh = jwt.sign(payload, JWT_REFRESH_SECRET, {
         expiresIn: JWT_REFRESH_EXPIRES_IN,
-      });
+      } as jwt.SignOptions);
 
       await AuthRepository.updateRefreshToken(
         user.iduser!,
