@@ -18,7 +18,7 @@ function isValidMes(value: string): boolean {
   return /^\d{4}-\d{2}$/.test(value);
 }
 
-router.post("/recibos/cuota", async (req, res) => {
+router.post("/recibos/cuota", async (req: Request, res: Response) => {
   const idcuota = Number(req.body?.idcuota);
 
   if (!Number.isFinite(idcuota) || idcuota <= 0) {
@@ -48,7 +48,7 @@ router.post("/recibos/cuota", async (req, res) => {
   doc.end();
 });
 
-router.post("/recibos/multiples", async (req, res) => {
+router.post("/recibos/multiples", async (req: Request, res: Response) => {
   const idcuotas = req.body?.idcuotas as number[];
 
   console.log(idcuotas);
@@ -150,7 +150,7 @@ router.get(
   },
 );
 
-router.get("/recibos/solicitud/:idsolicitud", async (req, res) => {
+router.get("/recibos/solicitud/:idsolicitud", async (req: Request, res: Response) => {
   const idsolicitud = Number(req.params.idsolicitud);
 
   if (!Number.isFinite(idsolicitud) || idsolicitud <= 0) {
