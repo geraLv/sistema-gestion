@@ -1,6 +1,7 @@
+import "dotenv/config"; // Load env vars before anything else
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
+// import dotenv from "dotenv"; // Removed as we use "dotenv/config"
 import helmet from "helmet";
 import compression from "compression";
 import { json } from "body-parser";
@@ -24,7 +25,7 @@ import adminRouter from "./routes/admin";
 import dashboardRouter from "./routes/dashboard";
 
 // Load environment variables FIRST
-dotenv.config();
+// Environment variables loaded via import "dotenv/config"
 
 // Initialize Sentry IMMEDIATELY after dotenv
 const sentryEnabled = initSentry();
