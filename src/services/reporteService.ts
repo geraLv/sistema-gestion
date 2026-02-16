@@ -411,4 +411,14 @@ export class ReporteService {
     // Aquí iría la lógica real de renderizado
     doc.text("Sin datos disponibles.");
   }
+
+  static async renderMonitorSolicitud(doc: typeof PDFDocument, idsolicitud: number) {
+    // Implementación placeholder para resolver el error de build
+    doc.fontSize(20).text(`Monitor Solicitud #${idsolicitud}`, { align: "center" });
+    doc.moveDown();
+    doc.fontSize(12).text(`Fecha: ${new Date().toLocaleDateString()}`);
+    doc.moveDown();
+    // Aquí iría la lógica para obtener y mostrar datos reales de la solicitud
+    doc.text("Detalles de la solicitud no disponibles en este momento.");
+  }
 }
