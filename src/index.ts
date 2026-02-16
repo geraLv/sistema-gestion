@@ -1,4 +1,8 @@
 import "dotenv/config"; // Load env vars before anything else
+import { initSentry } from "./config/sentry";
+// Initialize Sentry IMMEDIATELY after dotenv and BEFORE express
+const sentryEnabled = initSentry();
+
 import express from "express";
 import cors from "cors";
 // import dotenv from "dotenv"; // Removed as we use "dotenv/config"
@@ -9,7 +13,7 @@ import cookieParser from "cookie-parser";
 import Sentry from "@sentry/node";
 import logger from "./utils/logger";
 import { validateEnv } from "./config/validateEnv";
-import { initSentry } from "./config/sentry";
+// import { initSentry } from "./config/sentry"; // Moved up
 import { globalLimiter, authLimiter, apiLimiter, strictLimiter } from "./middleware/rateLimiter";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import authRouter, { authenticateToken, requireRole } from "./routes/auth";
@@ -27,8 +31,7 @@ import dashboardRouter from "./routes/dashboard";
 // Load environment variables FIRST
 // Environment variables loaded via import "dotenv/config"
 
-// Initialize Sentry IMMEDIATELY after dotenv
-const sentryEnabled = initSentry();
+// Sentry initialized at the top of the file
 
 // Validate environment variables
 validateEnv();
