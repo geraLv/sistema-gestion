@@ -37,6 +37,8 @@ import dashboardRouter from "./routes/dashboard";
 validateEnv();
 
 const app = express();
+app.set("trust proxy", 1); // Trust first proxy (Render Load Balancer)
+
 const corsOrigin = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
   : ["http://localhost:5173", "http://localhost:3000"];

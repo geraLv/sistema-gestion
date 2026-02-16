@@ -23,7 +23,7 @@ export const globalLimiter = rateLimit({
  */
 export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: isDevelopment ? 50 : 5,
+    max: isDevelopment ? 50 : 20,
     skipSuccessfulRequests: true,
     message: {
         success: false,
