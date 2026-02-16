@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/node';
-
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 /**

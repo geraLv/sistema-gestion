@@ -259,7 +259,7 @@ router.get(
       });
     } catch (error) {
       console.error("Error generating eficiencia de vendedores report:", error);
-      next(error); // Pass error to the next middleware
+      next(error);
     }
   },
 );
@@ -286,7 +286,7 @@ router.get(
   },
 );
 
-router.get("/recibos/mes", async (req, res) => {
+router.get("/recibos/mes", async (req: Request, res: Response, next: NextFunction) => {
   const mes = getMesFromQuery(String(req.query?.mes || ""));
   if (!isValidMes(mes)) {
     return res.status(400).json({
@@ -329,10 +329,10 @@ router.get("/recibos/mes", async (req, res) => {
   doc.end();
 });
 
-router.get("/recibos/mes-posterior", async (req, res) => {
+router.get("/recibos/mes-posterior", async (req: Request, res: Response, next: NextFunction) => {
   const now = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const mes = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const mes = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}`;
 
   const localidadIdRaw = req.query?.localidadId;
   const localidadId =
@@ -368,7 +368,7 @@ router.get("/recibos/mes-posterior", async (req, res) => {
   doc.end();
 });
 
-router.get("/recibos/mes-por-localidad", async (req, res) => {
+router.get("/recibos/mes-por-localidad", async (req: Request, res: Response, next: NextFunction) => {
   const localidadIdRaw = req.query?.localidadId;
   const localidadId =
     localidadIdRaw !== undefined ? Number(localidadIdRaw) : undefined;
@@ -408,7 +408,7 @@ router.get("/recibos/mes-por-localidad", async (req, res) => {
   doc.end();
 });
 
-router.get("/recibos/mes-posterior-por-localidad", async (req, res) => {
+router.get("/recibos/mes-posterior-por-localidad", async (req: Request, res: Response, next: NextFunction) => {
   const localidadIdRaw = req.query?.localidadId;
   const localidadId =
     localidadIdRaw !== undefined ? Number(localidadIdRaw) : undefined;
@@ -421,8 +421,8 @@ router.get("/recibos/mes-posterior-por-localidad", async (req, res) => {
   }
 
   const now = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const mes = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const mes = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}`;
 
   const recibos = await ReporteService.getRecibosMes(mes, localidadId);
   if (recibos.length === 0) {
@@ -444,7 +444,7 @@ router.get("/recibos/mes-posterior-por-localidad", async (req, res) => {
   doc.end();
 });
 
-router.get("/solicitudes/monitor", async (req, res) => {
+router.get("/solicitudes/monitor", async (req: Request, res: Response, next: NextFunction) => {
   const nroSolicitud = String(req.query?.nroSolicitud || "").trim();
   if (!nroSolicitud) {
     return res.status(400).json({
@@ -473,7 +473,7 @@ router.get("/solicitudes/monitor", async (req, res) => {
   doc.end();
 });
 
-router.get("/solicitudes.xlsx", async (req, res) => {
+router.get("/solicitudes.xlsx", async (req: Request, res: Response, next: NextFunction) => {
   const estado = String(req.query?.estado || "").toLowerCase();
   if (!["impagas", "pagas", "bajas"].includes(estado)) {
     return res.status(400).json({
