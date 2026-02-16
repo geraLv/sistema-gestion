@@ -11,7 +11,7 @@ export function validateEnv() {
     if (missing.length > 0) {
         console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
         console.error('Please check your .env file and ensure all required variables are set.');
-        process.exit(1);
+        // process.exit(1); // DISABLED FOR DEBUGGING
     }
 
     // Validate JWT_SECRET length

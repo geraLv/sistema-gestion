@@ -7,6 +7,7 @@ const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 console.log(`[DB Debug] Init Supabase Client`);
+console.log(`[DB Debug] Available Env Keys:`, Object.keys(process.env).join(", "));
 console.log(`[DB Debug] URL present: ${!!url}, Length: ${url?.length}`);
 console.log(`[DB Debug] Key present: ${!!key}, Length: ${key?.length}`);
 
