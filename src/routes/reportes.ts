@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import PDFDocument from "pdfkit";
 import { ReporteService } from "../services/reporteService";
 import { SolicitudService } from "../services/solicitudService";
@@ -109,6 +109,90 @@ router.get("/recibos/solicitud/:idsolicitud", async (req, res) => {
   ReporteService.renderRecibosSolicitudPagados(doc, recibos);
   doc.end();
 });
+
+// Endpoint para exportar análisis de cartera a PDF
+router.get(
+  "/analisis-cartera/pdf",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename=\"reporte-analisis-cartera.pdf\"`,
+      );
+
+      const doc = new PDFDocument({ size: "A4", margin: 40 });
+      doc.pipe(res);
+      await ReporteService.renderAnalisisCartera(doc); // Assuming a render method exists
+      doc.end();
+    } catch (error) {
+      console.error("Error generating analisis cartera PDF report:", error);
+      next(error);
+    }
+  },
+);
+
+// Endpoint para exportar reporte de mora a PDF
+router.get(
+  "/mora/pdf",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `inline; filename=\"reporte-mora.pdf\"`,
+      );
+
+      const doc = new PDFDocument({ size: "A4", margin: 40 });
+      doc.pipe(res);
+      await ReporteService.renderReporteMora(doc); // Assuming a render method exists
+      doc.end();
+    } catch (error) {
+      console.error("Error generating mora PDF report:", error);
+      next(error);
+    }
+  },
+);
+
+// Endpoint para obtener reporte de mora
+router.get(
+  "/mora",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const datos = await ReporteService.generarReporteMora();
+      res.status(200).json({
+        success: true,
+        message: "Reporte de mora generado",
+        data: datos,
+      });
+    } catch (error) {
+      console.error("Error generating mora report:", error);
+      next(error);
+    }
+  },
+);
+
+// Endpoint para obtener reporte de cobranza
+router.get(
+  "/cobranza",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { fechaInicio, fechaFin } = req.query;
+
+      // Placeholder for actual implementation
+      // You would typically fetch data based on fechaInicio and fechaFin
+      // and then generate a PDF or other report.
+      res.status(200).json({
+        success: true,
+        message: "Cobranza report endpoint hit",
+        query: { fechaInicio, fechaFin },
+      });
+    } catch (error) {
+      console.error("Error generating cobranza report:", error);
+      next(error); // Pass error to the next middleware
+    }
+  },
+);
 
 router.get("/recibos/mes", async (req, res) => {
   const mes = getMesFromQuery(String(req.query?.mes || ""));

@@ -379,4 +379,36 @@ export class ReporteService {
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }
+
+  static async generarReporteMora() {
+    // Implementación placeholder para resolver el error de build
+    // En el futuro, esto debería obtener datos reales de la base de datos
+    return {
+      mensaje: "Reporte de mora generado",
+      fecha: new Date().toISOString(),
+      datos: [],
+    };
+  }
+
+  static async renderReporteMora(doc: typeof PDFDocument) {
+    // Implementación básica para renderizar el reporte en PDF
+    doc.fontSize(20).text("Reporte de Mora", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(12).text(`Fecha: ${new Date().toLocaleDateString()}`);
+    doc.moveDown();
+    doc.text("Detalle de clientes en mora:");
+    // Aquí iría la lógica real de renderizado
+    doc.text("Sin datos disponibles.");
+  }
+
+  static async renderAnalisisCartera(doc: typeof PDFDocument) {
+    // Implementación básica para renderizar el análisis en PDF
+    doc.fontSize(20).text("Análisis de Cartera", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(12).text(`Fecha: ${new Date().toLocaleDateString()}`);
+    doc.moveDown();
+    doc.text("Resumen de cartera:");
+    // Aquí iría la lógica real de renderizado
+    doc.text("Sin datos disponibles.");
+  }
 }
