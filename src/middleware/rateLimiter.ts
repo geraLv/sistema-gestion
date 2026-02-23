@@ -39,7 +39,7 @@ export const authLimiter = rateLimit({
  */
 export const apiLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minuto
-    max: isDevelopment ? 100 : 30,
+    max: isDevelopment ? 200 : 90,  // 90/min en prod (permite ~3 usuarios activos con 30 req cada uno)
     message: {
         success: false,
         error: 'Límite de solicitudes por minuto excedido. Por favor, reduce la frecuencia de tus peticiones.'

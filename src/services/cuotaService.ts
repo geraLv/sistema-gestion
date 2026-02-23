@@ -29,12 +29,10 @@ export class CuotaService {
     // Pagar cuota
     const cuotaPagada = await CuotaRepository.pagarCuota(dto.idcuota);
 
-    console.log(cuota.relasolicitud);
     // Actualizar solicitud con nuevos valores
     const actualizado = await CuotaRepository.actualizarPorcentajeSolicitud(
       cuota.relasolicitud,
     );
-    console.log("paso2");
     return {
       success: true,
       cuotaPagada,

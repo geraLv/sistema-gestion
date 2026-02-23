@@ -91,7 +91,6 @@ export class SolicitudService {
           error: "Solicitud no encontrada",
         };
       }
-
       // Obtener cuotas
       const cuotas = await SolicitudRepository.getCuotasBySolicitud(
         solicitud.idsolicitud,

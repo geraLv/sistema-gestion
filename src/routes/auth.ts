@@ -3,6 +3,8 @@ import { AuthService } from "../services/authService";
 import { AuditService } from "../services/auditService";
 import { LoginDTO, ChangePasswordDTO } from "../types/auth";
 import { UnauthorizedError, ForbiddenError } from "../utils/errors";
+import { validateRequest } from "../middleware/validateRequest";
+import { loginSchema, changePasswordSchema, validateTokenSchema } from "../schemas/authSchemas";
 
 const router = Router();
 
@@ -66,7 +68,7 @@ export const requireRole = (role: "admin" | "user") => {
  * POST /api/auth/login
  * Login con usuario y contraseña
  */
-router.post("/login", async (req: Request, res: Response) => {
+router.post("/login", validateRequest(loginSchema), async (req: Request, res: Response) => {
   try {
     const { usuario, password } = req.body;
 
@@ -123,7 +125,7 @@ router.post("/login", async (req: Request, res: Response) => {
  * POST /api/auth/validate-token
  * Valida un token JWT
  */
-router.post("/validate-token", async (req: Request, res: Response) => {
+router.post("/validate-token", validateRequest(validateTokenSchema), async (req: Request, res: Response) => {
   try {
     let token = req.body.token || "";
 
@@ -184,6 +186,7 @@ router.get("/me", authenticateToken, async (req: Request, res: Response) => {
 router.post(
   "/change-password",
   authenticateToken,
+  validateRequest(changePasswordSchema),
   async (req: Request, res: Response) => {
     try {
       const { usuario, passwordActual, passwordNueva } = req.body;

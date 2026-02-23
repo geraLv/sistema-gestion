@@ -381,6 +381,63 @@ cuotasRouter.put("/:idcuota/importe", async (req: Request, res: Response) => {
 });
 
 
+
+/**
+ * PUT /api/cuotas/solicitud/:idsolicitud/recalcular-vencimientos
+ * Actualiza la fecha de inicio de la solicitud y recalcula las fechas
+ * de vencimiento de todas las cuotas IMPAGAS de dicha solicitud.
+ */
+cuotasRouter.put(
+  "/solicitud/:idsolicitud/recalcular-vencimientos",
+  async (req: Request, res: Response) => {
+    try {
+      const idsolicitud = Number(req.params.idsolicitud);
+      const { fechaInicio } = req.body as { fechaInicio?: string };
+
+      if (!Number.isFinite(idsolicitud) || idsolicitud <= 0) {
+        return res.status(400).json({ success: false, error: "idsolicitud inválido" });
+      }
+      if (!fechaInicio || !/^\d{4}-\d{2}-\d{2}$/.test(fechaInicio)) {
+        return res.status(400).json({ success: false, error: "fechaInicio inválida (formato YYYY-MM-DD requerido)" });
+      }
+
+      // 1. Update fechalta on the solicitud
+      const { error: solError } = await supabase
+        .from("solicitud")
+        .update({ fechalta: new Date(fechaInicio).toISOString() })
+        .eq("idsolicitud", idsolicitud);
+
+      if (solError) {
+        return res.status(500).json({ success: false, error: `Error actualizando solicitud: ${solError.message}` });
+      }
+
+      // 2. Recalculate vencimientos for all unpaid cuotas
+      const cuotasActualizadas = await CuotaRepository.recalcularVencimientos(idsolicitud, fechaInicio);
+
+      try {
+        await AuditService.log({
+          actor: (req as any).user,
+          action: "UPDATE",
+          entity: "solicitud_vencimientos",
+          entityId: idsolicitud,
+          before: null,
+          after: { fechaInicio, cuotasActualizadas },
+          ...getRequestMeta(req),
+        });
+      } catch (auditError) {
+        console.error("Audit log failed (recalcular-vencimientos):", auditError);
+      }
+
+      return res.json({
+        success: true,
+        data: { cuotasActualizadas, fechaInicio },
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, error: (error as Error).message });
+    }
+  },
+);
+
 /**
  * DELETE /api/cuotas/:idcuota - Eliminar una cuota
  */

@@ -460,4 +460,51 @@ export class CuotaRepository {
         .eq("idsolicitud", cuota.relasolicitud);
     }
   }
+
+  /**
+   * Recalcula las fechas de vencimiento de todas las cuotas IMPAGAS de una solicitud.
+   * La cuota nrocuota N vence en: fechaInicio + N meses.
+   * Las cuotas pagadas (estado=2) NO se modifican.
+   */
+  static async recalcularVencimientos(
+    idsolicitud: number,
+    fechaInicio: string, // YYYY-MM-DD
+  ): Promise<number> {
+    // 1. Get all cuotas ordered by nrocuota
+    const { data: cuotas, error } = await supabase
+      .from("cuotas")
+      .select("idcuota, nrocuota, estado")
+      .eq("relasolicitud", idsolicitud)
+      .order("nrocuota", { ascending: true });
+
+    if (error) throw new Error(`Error obteniendo cuotas: ${error.message}`);
+    if (!cuotas || cuotas.length === 0) return 0;
+
+    // 2. Update only unpaid cuotas
+    const base = new Date(fechaInicio);
+    let updated = 0;
+
+    for (const cuota of cuotas) {
+      if (cuota.estado === 2) continue; // skip paid
+
+      // Calculate new due date: fechaInicio + nrocuota months
+      const venc = new Date(base);
+      venc.setMonth(venc.getMonth() + cuota.nrocuota);
+      const vencStr = venc.toISOString().split("T")[0];
+
+      const { error: updateErr } = await supabase
+        .from("cuotas")
+        .update({ vencimiento: vencStr })
+        .eq("idcuota", cuota.idcuota);
+
+      if (updateErr) {
+        throw new Error(
+          `Error actualizando cuota ${cuota.idcuota}: ${updateErr.message}`,
+        );
+      }
+      updated++;
+    }
+
+    return updated;
+  }
 }

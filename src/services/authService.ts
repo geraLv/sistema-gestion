@@ -8,14 +8,15 @@ import {
   UserPayload,
   ValidateTokenResponse,
 } from "../types/auth";
+import { validateEnv } from "../config/validateEnv";
+
+validateEnv();
 
 const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  "tu-clave-secreta-super-segura-cambiar-en-produccion";
+  process.env.JWT_SECRET || "";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "15m";
 const JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET ||
-  "tu-refresh-secreto-super-seguro-cambiar-en-produccion";
+  process.env.JWT_REFRESH_SECRET || "";
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "30d";
 
 const hashToken = (token: string) =>
@@ -33,7 +34,6 @@ export class AuthService {
    * Login - Valida credenciales y retorna JWT token
    */
   static async login(dto: LoginDTO): Promise<AuthResponse> {
-    console.log(dto);
     try {
       // Validaciones
       if (!dto.usuario || dto.usuario.trim().length === 0) {
@@ -101,7 +101,6 @@ export class AuthService {
         refreshExpiryDate(),
       );
 
-      console.log("paso");
       return {
         success: true,
         token,

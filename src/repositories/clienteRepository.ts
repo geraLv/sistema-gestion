@@ -36,9 +36,34 @@ export class ClienteRepository {
 
     const queryTerm = q?.trim();
     if (queryTerm) {
-      const numeric = Number(queryTerm);
-      if (Number.isFinite(numeric)) {
-        query = query.or(`appynom.ilike.%${queryTerm}%,dni.eq.${queryTerm}`);
+      // Logic for "Smart Search"
+      const hasNumbers = /\d/.test(queryTerm);
+      const cleanTerm = queryTerm.replace(/\D/g, "");
+
+      if (hasNumbers && cleanTerm.length > 0) {
+        // Generate variations to match DB formats (dots vs no dots)
+        const variations = [queryTerm, cleanTerm];
+
+        // Try to format as DNI xx.xxx.xxx if length is appropriate
+        // 7 digits: x.xxx.xxx
+        // 8 digits: xx.xxx.xxx
+        if (cleanTerm.length === 7) {
+          const formatted = cleanTerm.replace(/(\d{1})(\d{3})(\d{3})/, "$1.$2.$3");
+          variations.push(formatted);
+        } else if (cleanTerm.length === 8) {
+          const formatted = cleanTerm.replace(/(\d{2})(\d{3})(\d{3})/, "$1.$2.$3");
+          variations.push(formatted);
+        }
+
+        const filters = [`appynom.ilike.%${queryTerm}%`];
+
+        variations.forEach(v => {
+          filters.push(`dni.eq.${v}`);
+          filters.push(`dni.ilike.%${v}%`);
+        });
+
+        const uniqueFilters = [...new Set(filters)];
+        query = query.or(uniqueFilters.join(","));
       } else {
         query = query.ilike("appynom", `%${queryTerm}%`);
       }
@@ -151,10 +176,14 @@ export class ClienteRepository {
   }
 
   /**
-   * Busca clientes por nombre (ilike para búsqueda insensible a mayúsculas)
+   * Busca clientes por nombre o DNI (limitado a 50)
    */
   static async searchClientes(query: string): Promise<ClienteWithLocalidad[]> {
-    const { data, error } = await supabase
+    const queryTerm = query.trim();
+    const hasNumbers = /\d/.test(queryTerm);
+    const cleanTerm = queryTerm.replace(/\D/g, "");
+
+    let dbQuery = supabase
       .from("cliente")
       .select(
         `
@@ -170,9 +199,32 @@ export class ClienteRepository {
         localidad(nombre)
       `,
       )
-      .ilike("appynom", `%${query}%`)
-      .order("appynom", { ascending: true })
       .limit(50);
+
+    if (hasNumbers && cleanTerm.length > 0) {
+      const variations = [queryTerm, cleanTerm];
+      if (cleanTerm.length === 7) {
+        variations.push(cleanTerm.replace(/(\d{1})(\d{3})(\d{3})/, "$1.$2.$3"));
+      } else if (cleanTerm.length === 8) {
+        variations.push(cleanTerm.replace(/(\d{2})(\d{3})(\d{3})/, "$1.$2.$3"));
+      }
+
+      const filters = [`appynom.ilike.%${queryTerm}%`];
+      variations.forEach(v => {
+        // For quick search, simple ilike is usually enough, but let's match exact too just in case
+        filters.push(`dni.ilike.%${v}%`);
+      });
+
+      const uniqueFilters = [...new Set(filters)];
+      dbQuery = dbQuery.or(uniqueFilters.join(","));
+    } else {
+      dbQuery = dbQuery.ilike("appynom", `%${queryTerm}%`);
+    }
+
+    // Sort by name
+    dbQuery = dbQuery.order("appynom", { ascending: true });
+
+    const { data, error } = await dbQuery;
 
     if (error) {
       console.error("Error searching clientes:", error.message);
