@@ -380,6 +380,61 @@ cuotasRouter.put("/:idcuota/importe", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * PUT /api/cuotas/:idcuota/fecha-pago - Modificar fecha de pago de una cuota pagada
+ */
+cuotasRouter.put("/:idcuota/fecha-pago", async (req: Request, res: Response) => {
+  try {
+    const { idcuota } = req.params;
+    const { fechaPago } = req.body as { fechaPago?: string };
+
+    if (!idcuota || isNaN(Number(idcuota))) {
+      return res.status(400).json({
+        success: false,
+        error: "ID de cuota inválido",
+      });
+    }
+
+    if (!fechaPago || !/^\d{4}-\d{2}-\d{2}$/.test(fechaPago)) {
+      return res.status(400).json({
+        success: false,
+        error: "fechaPago inválida (formato YYYY-MM-DD requerido)",
+      });
+    }
+
+    const before = await CuotaRepository.getCuotaById(Number(idcuota));
+    const cuota = await CuotaService.actualizarFechaPago(
+      Number(idcuota),
+      fechaPago,
+    );
+    const after = await CuotaRepository.getCuotaById(Number(idcuota));
+
+    try {
+      await AuditService.log({
+        actor: (req as any).user,
+        action: "UPDATE",
+        entity: "cuotas",
+        entityId: Number(idcuota),
+        before,
+        after,
+        ...getRequestMeta(req),
+      });
+    } catch (auditError) {
+      console.error("Audit log failed (update fecha pago):", auditError);
+    }
+
+    res.json({
+      success: true,
+      data: cuota,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: (error as Error).message,
+    });
+  }
+});
+
 
 
 /**

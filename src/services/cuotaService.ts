@@ -99,6 +99,24 @@ export class CuotaService {
   }
 
   /**
+   * Actualizar fecha de pago de una cuota pagada
+   */
+  static async actualizarFechaPago(
+    idcuota: number,
+    fechaPago: string,
+  ): Promise<Cuota> {
+    const cuota = await CuotaRepository.getCuotaById(idcuota);
+    if (!cuota) {
+      throw new Error("Cuota no encontrada");
+    }
+    if (cuota.estado !== 2) {
+      throw new Error("Solo se puede editar la fecha de cuotas pagadas");
+    }
+
+    return CuotaRepository.actualizarFechaPago(idcuota, fechaPago);
+  }
+
+  /**
    * Obtener cuotas con filtro
    */
   static async obtenerCuotas(

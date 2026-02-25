@@ -11,7 +11,7 @@ export class ReporteRepository {
       .from("cuotas")
       .select(
         `
-        idcuota, nrocuota, importe, vencimiento, estado,
+        idcuota, nrocuota, importe, vencimiento, estado, fecha,
         solicitud:relasolicitud(
           nrosolicitud, estado,
           cliente:relacliente(appynom, dni, direccion, telefono, localidad:relalocalidad(nombre)),
@@ -66,6 +66,7 @@ export class ReporteRepository {
       nrocuota: (row as any).nrocuota,
       importe: (row as any).importe,
       vencimiento: (row as any).vencimiento,
+      fecha: (row as any).fecha ?? null,
       nrosolicitud: solicitud.nrosolicitud,
       cliente: {
         appynom: cliente.appynom,
@@ -91,7 +92,7 @@ export class ReporteRepository {
       .from("cuotas")
       .select(
         `
-        idcuota, nrocuota, importe, vencimiento, estado,
+        idcuota, nrocuota, importe, vencimiento, estado, fecha,
         solicitud:relasolicitud(
           nrosolicitud, estado,
           cliente:relacliente(appynom, dni, direccion, telefono, localidad:relalocalidad(nombre)),
@@ -145,6 +146,7 @@ export class ReporteRepository {
           nrocuota: row.nrocuota,
           importe: row.importe,
           vencimiento: row.vencimiento,
+          fecha: row.fecha ?? null,
           nrosolicitud: solicitud.nrosolicitud,
           cliente: {
             appynom: cliente.appynom,
@@ -168,7 +170,7 @@ export class ReporteRepository {
       .from("cuotas")
       .select(
         `
-        idcuota, nrocuota, importe, vencimiento, estado,
+        idcuota, nrocuota, importe, vencimiento, estado, fecha,
         solicitud:relasolicitud(
           nrosolicitud,
           cliente:relacliente(appynom, dni, direccion, telefono, localidad:relalocalidad(nombre)),
@@ -208,6 +210,7 @@ export class ReporteRepository {
           nrocuota: row.nrocuota,
           importe: row.importe,
           vencimiento: row.vencimiento,
+          fecha: row.fecha ?? null,
           nrosolicitud: solicitud.nrosolicitud,
           cliente: {
             appynom: cliente.appynom,
@@ -232,7 +235,7 @@ export class ReporteRepository {
       .from("cuotas")
       .select(
         `
-        idcuota, nrocuota, importe, vencimiento, estado,
+        idcuota, nrocuota, importe, vencimiento, estado, fecha,
         solicitud:relasolicitud(
           nrosolicitud, estado,
           cliente:relacliente(appynom, dni, direccion, telefono, relalocalidad, localidad:relalocalidad(nombre)),
@@ -275,6 +278,7 @@ export class ReporteRepository {
         nrocuota: row.nrocuota,
         importe: row.importe,
         vencimiento: row.vencimiento,
+        fecha: row.fecha ?? null,
         nrosolicitud: solicitud?.nrosolicitud || "",
         solicitudEstado: solicitud?.estado ?? null,
         cliente: {
@@ -312,6 +316,7 @@ export class ReporteRepository {
       nrocuota: r.nrocuota,
       importe: r.importe,
       vencimiento: r.vencimiento,
+      fecha: r.fecha ?? null,
       nrosolicitud: r.nrosolicitud,
       cliente: {
         appynom: r.cliente.appynom,

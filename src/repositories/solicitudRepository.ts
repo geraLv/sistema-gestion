@@ -229,7 +229,7 @@ export class SolicitudRepository {
         vendedor(apellidonombre)
       `,
       )
-      .eq("idsolicitud", nrosolicitud)
+      .eq("nrosolicitud", nrosolicitud)
       .single();
 
     if (error && error.code !== "PGRST116") {

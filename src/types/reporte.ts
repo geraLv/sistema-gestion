@@ -3,6 +3,7 @@ export interface ReciboCuotaData {
   nrocuota: number;
   importe: number;
   vencimiento: string;
+  fecha?: string | null; // fecha de pago
   nrosolicitud: string;
   cliente: {
     appynom: string;

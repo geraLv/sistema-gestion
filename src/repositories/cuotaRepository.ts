@@ -271,6 +271,27 @@ export class CuotaRepository {
   }
 
   /**
+   * Actualiza la fecha de pago de una cuota (solo campo fecha)
+   */
+  static async actualizarFechaPago(
+    idcuota: number,
+    fechaPago: string, // YYYY-MM-DD
+  ): Promise<Cuota> {
+    const { data, error } = await supabase
+      .from("cuotas")
+      .update({ fecha: fechaPago })
+      .eq("idcuota", idcuota)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Error al actualizar fecha de pago: ${error.message}`);
+    }
+
+    return data as Cuota;
+  }
+
+  /**
    * Actualiza porcentaje pagado en la solicitud
    */
   static async actualizarPorcentajeSolicitud(
@@ -335,7 +356,15 @@ export class CuotaRepository {
   static async getCuotasBySolicitud(idsolicitud: number): Promise<Cuota[]> {
     const { data, error } = await supabase
       .from("cuotas")
-      .select("*")
+      .select(
+        `
+        idcuota, relasolicitud, nrocuota, importe, vencimiento, estado, fecha,
+        solicitud:relasolicitud(
+          nrosolicitud,
+          cliente:relacliente(appynom)
+        )
+      `,
+      )
       .eq("relasolicitud", idsolicitud)
       .order("nrocuota", { ascending: true });
 
@@ -462,9 +491,8 @@ export class CuotaRepository {
   }
 
   /**
-   * Recalcula las fechas de vencimiento de todas las cuotas IMPAGAS de una solicitud.
-   * La cuota nrocuota N vence en: fechaInicio + N meses.
-   * Las cuotas pagadas (estado=2) NO se modifican.
+   * Recalcula las fechas de vencimiento de todas las cuotas de una solicitud.
+   * La cuota nrocuota N vence en: fechaInicio + (N-1) meses.
    */
   static async recalcularVencimientos(
     idsolicitud: number,
@@ -481,16 +509,32 @@ export class CuotaRepository {
     if (!cuotas || cuotas.length === 0) return 0;
 
     // 2. Update only unpaid cuotas
-    const base = new Date(fechaInicio);
+    const [y, m, d] = fechaInicio.split("-").map((part) => Number(part));
+    if (
+      !Number.isFinite(y) ||
+      !Number.isFinite(m) ||
+      !Number.isFinite(d)
+    ) {
+      throw new Error("fechaInicio inválida");
+    }
+    // Create a local date to avoid timezone shifts on date-only values.
+    const base = new Date(y, m - 1, d);
     let updated = 0;
 
-    for (const cuota of cuotas) {
-      if (cuota.estado === 2) continue; // skip paid
+    const formatLocalDate = (date: Date) => {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    };
 
+    for (const cuota of cuotas) {
       // Calculate new due date: fechaInicio + nrocuota months
       const venc = new Date(base);
-      venc.setMonth(venc.getMonth() + cuota.nrocuota);
-      const vencStr = venc.toISOString().split("T")[0];
+      const nro = Number(cuota.nrocuota) || 0;
+      const offset = Math.max(nro - 1, 0);
+      venc.setMonth(venc.getMonth() + offset);
+      const vencStr = formatLocalDate(venc);
 
       const { error: updateErr } = await supabase
         .from("cuotas")
