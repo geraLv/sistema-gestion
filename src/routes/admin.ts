@@ -23,7 +23,8 @@ router.get("/users", async (req: Request, res: Response) => {
 
 router.post("/users", async (req: Request, res: Response) => {
   try {
-    const { usuario, password, nombre, email, role, status } = req.body;
+    const usuario = String(req.body.usuario ?? "").trim();
+    const { password, nombre, email, role, status } = req.body;
     if (!usuario || !password) {
       return res.status(400).json({
         success: false,
@@ -68,7 +69,10 @@ router.put("/users/:id", async (req: Request, res: Response) => {
     }
     const before = await AuthRepository.getUserById(iduser);
     const updated = await AuthRepository.updateUser(iduser, {
-      usuario: req.body.usuario,
+      usuario:
+        req.body.usuario !== undefined
+          ? String(req.body.usuario).trim()
+          : undefined,
       nombre: req.body.nombre,
       email: req.body.email,
     });

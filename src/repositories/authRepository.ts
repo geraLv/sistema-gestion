@@ -19,14 +19,18 @@ export class AuthRepository {
    * Obtiene un usuario por nombre de usuario
    */
   static async getUserByUsername(usuario: string): Promise<User | null> {
+    const normalizedUsuario = usuario.trim();
     const { data, error } = await supabase
       .from("app_user")
       .select("*")
-      .eq("usuario", usuario)
+      .eq("usuario", normalizedUsuario)
       .single();
 
     if (error && error.code !== "PGRST116") {
-      logger.error("Error fetching user by username", { error: error.message, usuario });
+      logger.error("Error fetching user by username", {
+        error: error.message,
+        usuario: normalizedUsuario,
+      });
       throw new Error(`Error al obtener usuario: ${error.message}`);
     }
 
@@ -78,6 +82,7 @@ export class AuthRepository {
     role: string = "user",
     status: number = 1,
   ): Promise<User> {
+    const normalizedUsuario = usuario.trim();
     // Hash password with bcrypt
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -85,7 +90,7 @@ export class AuthRepository {
       .from("app_user")
       .insert([
         {
-          usuario,
+          usuario: normalizedUsuario,
           password: passwordHash,
           nombre: nombre || "",
           email: email || "",
@@ -153,10 +158,14 @@ export class AuthRepository {
     iduser: number,
     data: { usuario?: string; nombre?: string; email?: string },
   ): Promise<User | null> {
+    const normalizedUsuario =
+      data.usuario !== undefined ? data.usuario.trim() : undefined;
     const { data: updated, error } = await supabase
       .from("app_user")
       .update({
-        ...(data.usuario !== undefined ? { usuario: data.usuario } : {}),
+        ...(normalizedUsuario !== undefined
+          ? { usuario: normalizedUsuario }
+          : {}),
         ...(data.nombre !== undefined ? { nombre: data.nombre } : {}),
         ...(data.email !== undefined ? { email: data.email } : {}),
       })
