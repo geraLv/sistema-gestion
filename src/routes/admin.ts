@@ -147,6 +147,36 @@ router.patch("/users/:id/role", async (req: Request, res: Response) => {
   }
 });
 
+router.patch("/users/:id/password", async (req: Request, res: Response) => {
+  try {
+    const iduser = Number(req.params.id);
+    const password = String(req.body.password || "");
+    if (!iduser || !password) {
+      return res.status(400).json({ success: false, error: "id y password son requeridos" });
+    }
+
+    await AuthRepository.updatePassword(iduser, password);
+
+    try {
+      await AuditService.log({
+        actor: (req as any).user,
+        action: "PASSWORD_RESET",
+        entity: "app_user",
+        entityId: iduser,
+        before: null,
+        after: { passwordChanged: true },
+        ...getRequestMeta(req),
+      });
+    } catch (auditError) {
+      logger.warn("Audit log failed for password reset", { error: auditError });
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 router.get("/audit", async (req: Request, res: Response) => {
   try {
     const logs = await AuditRepository.listLogs({

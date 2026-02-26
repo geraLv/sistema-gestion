@@ -6,7 +6,8 @@ export type AuditAction =
   | "LOGOUT"
   | "PASSWORD_CHANGE"
   | "STATUS_CHANGE"
-  | "ROLE_CHANGE";
+  | "ROLE_CHANGE"
+  | "PASSWORD_RESET";
 
 export interface AuditLogCreate {
   actor_user_id: number | null;
