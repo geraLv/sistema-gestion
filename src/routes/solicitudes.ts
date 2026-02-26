@@ -2,12 +2,45 @@ import { Router, Request, Response } from "express";
 import { SolicitudService } from "../services/solicitudService";
 import { AuditService } from "../services/auditService";
 import { CreateSolicitudDTO, UpdateSolicitudDTO } from "../types/solicitud";
+import { authenticateToken } from "./auth";
 
 const router = Router();
 
 const getRequestMeta = (req: Request) => ({
   ip: (req.headers["x-forwarded-for"] as string) || req.ip,
   userAgent: req.headers["user-agent"] as string,
+});
+
+/**
+ * GET /api/solicitudes/mis-ventas
+ * Obtiene las solicitudes del usuario autenticado
+ */
+router.get("/mis-ventas", authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const page = req.query.page ? Number(req.query.page) : undefined;
+    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : undefined;
+
+    if (!user?.iduser) {
+      return res.status(401).json({ success: false, error: "Usuario no autenticado" });
+    }
+
+    const result = await SolicitudService.listarMisVentas(user.iduser, page, pageSize);
+    if (!result.success) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    res.json({
+      success: true,
+      data: result.data || [],
+      total: result.total ?? null,
+      kpis: result.kpis,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message || "Error al obtener mis ventas",
+    });
+  }
 });
 
 /**
@@ -125,7 +158,7 @@ router.get("/:id/cuotas", async (req: Request, res: Response) => {
  * POST /api/solicitudes
  * Crea una nueva solicitud con cuotas automáticas
  */
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", authenticateToken, async (req: Request, res: Response) => {
   try {
     const {
       selectCliente,
@@ -142,6 +175,7 @@ router.post("/", async (req: Request, res: Response) => {
       selectCliente: parseInt(selectCliente, 10),
       idproducto: parseInt(idproducto, 10),
       selectVendedor: parseInt(selectVendedor, 10),
+      relausuario: (req as any).user?.iduser ?? undefined,
       monto: parseFloat(monto),
       totalapagar: parseFloat(totalapagar),
       selectCuotas: parseInt(selectCuotas, 10),

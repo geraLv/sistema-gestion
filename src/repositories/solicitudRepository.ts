@@ -5,6 +5,7 @@ import {
   SolicitudConDetalles,
   CreateSolicitudDTO,
   UpdateSolicitudDTO,
+  MisVentasKPIs,
 } from "../types/solicitud";
 
 export class SolicitudRepository {
@@ -51,8 +52,7 @@ export class SolicitudRepository {
         `
         *,
         cliente(appynom, dni, direccion, telefono, localidad(nombre)),
-        producto(descripcion),
-        vendedor(apellidonombre)
+        producto(descripcion)
       `,
         { count: "exact" },
       )
@@ -198,8 +198,7 @@ export class SolicitudRepository {
         `
         *,
         cliente(appynom, dni, direccion, telefono, localidad(nombre)),
-        producto(descripcion),
-        vendedor(apellidonombre)
+        producto(descripcion)
       `,
       )
       .eq("idsolicitud", idsolicitud)
@@ -225,12 +224,13 @@ export class SolicitudRepository {
         `
         *,
         cliente(appynom, dni, direccion, telefono, localidad(nombre)),
-        producto(descripcion),
-        vendedor(apellidonombre)
+        producto(descripcion)
       `,
       )
       .eq("nrosolicitud", nrosolicitud)
-      .single();
+      .order("idsolicitud", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (error && error.code !== "PGRST116") {
       console.error("Error fetching solicitud by nro:", error.message);
@@ -273,6 +273,7 @@ export class SolicitudRepository {
           relacliente: dto.selectCliente,
           relaproducto: dto.idproducto,
           relavendedor: dto.selectVendedor,
+          relausuario: dto.relausuario ?? null,
           monto: dto.monto,
           cantidadcuotas: dto.selectCuotas,
           totalabonado: 0,
@@ -315,9 +316,10 @@ export class SolicitudRepository {
       .update({
         relacliente: dto.selectCliente ?? undefined,
         relavendedor: dto.selectVendedor ?? undefined,
+        relausuario: dto.relausuario ?? undefined,
         monto: dto.monto,
         cantidadcuotas: dto.selectCuotas,
-        nrosolicitud: dto.nroSolicitud,
+        nrosolicitud: dto.nroSolicitud || undefined,
         totalapagar: dto.totalapagar,
         relaproducto: dto.idproducto ?? undefined,
         porcentajepagado: porcentajePagado,
@@ -567,5 +569,65 @@ export class SolicitudRepository {
     }
 
     return data || [];
+  }
+
+  /**
+   * Obtiene solicitudes de un usuario específico (mis ventas)
+   */
+  static async getSolicitudesByUsuario(
+    iduser: number,
+    page?: number,
+    pageSize?: number,
+  ): Promise<{ data: SolicitudConDetalles[]; total: number; kpis: MisVentasKPIs }> {
+    // KPI Query
+    const { data: allUserSales, error: errorKpi } = await supabase
+      .from("solicitud")
+      .select("estado, totalapagar")
+      .eq("relausuario", iduser);
+
+    let kpis: MisVentasKPIs = {
+      totalImporte: 0,
+      activas: 0,
+      pagadas: 0,
+      bajas: 0,
+    };
+
+    if (!errorKpi && allUserSales) {
+      kpis = {
+        totalImporte: allUserSales.reduce((acc: number, v: any) => acc + (v.totalapagar || 0), 0),
+        activas: allUserSales.filter((v: any) => v.estado === 1).length,
+        pagadas: allUserSales.filter((v: any) => v.estado === 2).length,
+        bajas: allUserSales.filter((v: any) => v.estado === 0).length,
+      };
+    }
+
+    let query = supabase
+      .from("solicitud")
+      .select(
+        `
+        *,
+        cliente(appynom, dni, direccion, telefono, localidad(nombre)),
+        producto(descripcion)
+      `,
+        { count: "exact" },
+      )
+      .eq("relausuario", iduser)
+      .order("idsolicitud", { ascending: false });
+
+    const size = pageSize && pageSize > 0 ? pageSize : undefined;
+    const currentPage = page && page > 0 ? page : 1;
+    if (size) {
+      const from = (currentPage - 1) * size;
+      const to = from + size - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw new Error(`Error al obtener mis ventas: ${error.message}`);
+    }
+
+    return { data: data || [], total: count || 0, kpis };
   }
 }

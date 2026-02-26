@@ -3,6 +3,7 @@ export interface Solicitud {
   relacliente: number;
   relaproducto: number;
   relavendedor: number;
+  relausuario?: number; // FK a app_user
   monto: number;
   cantidadcuotas: number;
   totalabonado: number;
@@ -32,6 +33,7 @@ export interface SolicitudConDetalles extends Solicitud {
   cliente_telefono?: string;
   producto_descripcion?: string;
   vendedor_apellidonombre?: string;
+  usuario_nombre?: string;
   localidad_nombre?: string;
   cuotas_pagadas?: number;
   total_pagado?: number;
@@ -41,6 +43,7 @@ export interface CreateSolicitudDTO {
   selectCliente: number;
   idproducto: number;
   selectVendedor: number;
+  relausuario?: number; // iduser del usuario autenticado
   monto: number;
   totalapagar: number;
   selectCuotas: number;
@@ -53,6 +56,7 @@ export interface UpdateSolicitudDTO {
   selectCliente?: number;
   selectVendedor?: number;
   idproducto?: number;
+  relausuario?: number;
   monto: number;
   selectCuotas: number;
   nroSolicitud: string;
@@ -61,15 +65,23 @@ export interface UpdateSolicitudDTO {
   selectEstado: number;
 }
 
+export interface MisVentasKPIs {
+  totalImporte: number;
+  activas: number;
+  pagadas: number;
+  bajas: number;
+}
+
 export interface SolicitudResponse {
   success: boolean;
   data?:
-    | Solicitud
-    | Solicitud[]
-    | SolicitudConDetalles
-    | SolicitudConDetalles[]
-    | null;
+  | Solicitud
+  | Solicitud[]
+  | SolicitudConDetalles
+  | SolicitudConDetalles[]
+  | null;
   total?: number;
+  kpis?: MisVentasKPIs;
   message?: string;
   error?: string;
 }

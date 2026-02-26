@@ -5,6 +5,7 @@ import {
   SolicitudResponse,
   CuotaResponse,
 } from "../types/solicitud";
+import { AuthRepository } from "../repositories/authRepository";
 
 export class SolicitudService {
   /**
@@ -102,10 +103,20 @@ export class SolicitudService {
         .filter((c) => c.estado === 2)
         .reduce((sum, c) => sum + c.importe, 0);
 
+      // Buscar datos de usuario manualmente
+      let usuarioData = null;
+      if (solicitud.relausuario) {
+        const user = await AuthRepository.getUserById(solicitud.relausuario);
+        if (user) {
+          usuarioData = { nombre: user.nombre || user.usuario };
+        }
+      }
+
       return {
         success: true,
         data: {
           ...solicitud,
+          usuario: usuarioData,
           cuotas,
           cuotas_pagadas: cuotasPagadas,
           total_pagado: totalPagado,
@@ -357,10 +368,6 @@ export class SolicitudService {
       return { valid: false, error: "Producto inválido" };
     }
 
-    if (!data.selectVendedor || data.selectVendedor <= 0) {
-      return { valid: false, error: "Vendedor inválido" };
-    }
-
     if (!data.monto || data.monto <= 0) {
       return { valid: false, error: "Monto debe ser mayor a 0" };
     }
@@ -384,10 +391,6 @@ export class SolicitudService {
       return { valid: false, error: "Cliente inválido" };
     }
 
-    if (data.selectVendedor !== undefined && data.selectVendedor <= 0) {
-      return { valid: false, error: "Vendedor inválido" };
-    }
-
     if (data.idproducto !== undefined && data.idproducto <= 0) {
       return { valid: false, error: "Producto inválido" };
     }
@@ -404,13 +407,38 @@ export class SolicitudService {
       return { valid: false, error: "Cantidad de cuotas debe ser mayor a 0" };
     }
 
-    if (data.nroSolicitud !== undefined) {
-      const nroStr = String(data.nroSolicitud || "");
-      if (nroStr.trim().length === 0) {
-        return { valid: false, error: "Número de solicitud no puede estar vacío" };
-      }
-    }
+    // Removido validación de nroSolicitud porque en el edit del frontend
+    // se envía como string vacío para no sobreescribir el existente generado por DB.
+
 
     return { valid: true };
+  }
+
+  /**
+   * Obtiene las solicitudes del usuario autenticado (mis ventas)
+   */
+  static async listarMisVentas(
+    iduser: number,
+    page?: number,
+    pageSize?: number,
+  ): Promise<SolicitudResponse> {
+    try {
+      const result = await SolicitudRepository.getSolicitudesByUsuario(
+        iduser,
+        page,
+        pageSize,
+      );
+      return {
+        success: true,
+        data: result.data,
+        total: result.total,
+        kpis: result.kpis,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 }

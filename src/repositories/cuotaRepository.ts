@@ -92,7 +92,7 @@ export class CuotaRepository {
       const { data: nroData, error: nroError } = await supabase
         .from("solicitud")
         .select("idsolicitud")
-        .eq("nrosolicitud", numeric)
+        .eq("nrosolicitud", String(numeric))
         .limit(200);
 
       if (nroError) {
@@ -300,7 +300,7 @@ export class CuotaRepository {
     // Obtener datos de solicitud y cuotas
     const { data: solicitud, error: errorSol } = await supabase
       .from("solicitud")
-      .select("totalapagar")
+      .select("totalapagar, estado")
       .eq("idsolicitud", idsolicitud)
       .single();
 
@@ -327,15 +327,23 @@ export class CuotaRepository {
     const porcentajepagado =
       (totalabonado * 100) / (solicitud as any).totalapagar;
 
+    const porcentajepagado_rounded = Math.round(porcentajepagado * 100) / 100;
+
+    let nuevoEstado = (solicitud as any).estado;
+    if (nuevoEstado !== 0) {
+      nuevoEstado = totalabonado >= (solicitud as any).totalapagar - 0.01 ? 2 : 1;
+    }
+
     console.log("totalabonado:", totalabonado);
-    console.log("porcentajepagado:", porcentajepagado);
+    console.log("porcentajepagado:", porcentajepagado_rounded);
 
     // Actualizar solicitud
     const { error: errorUpdate } = await supabase
       .from("solicitud")
       .update({
         totalabonado: totalabonado,
-        porcentajepagado: Math.round(porcentajepagado * 100) / 100,
+        porcentajepagado: porcentajepagado_rounded,
+        estado: nuevoEstado,
       })
       .eq("idsolicitud", idsolicitud);
 
@@ -360,6 +368,7 @@ export class CuotaRepository {
         `
         idcuota, relasolicitud, nrocuota, importe, vencimiento, estado, fecha,
         solicitud:relasolicitud(
+          idsolicitud,
           nrosolicitud,
           cliente:relacliente(appynom)
         )

@@ -1,9 +1,10 @@
 import { Router, Request, Response } from "express";
 import { DashboardService } from "../services/dashboardService";
+import { authenticateToken } from "./auth";
 
 const router = Router();
 
-router.get("/", async (_req: Request, res: Response) => {
+router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
     const data = await DashboardService.getDashboardSummary();
     return res.json({ success: true, data });

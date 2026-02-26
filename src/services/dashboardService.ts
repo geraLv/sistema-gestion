@@ -18,6 +18,9 @@ export class DashboardService {
       solicitudesRecientes,
       revenueHistory,
       efficiency,
+      solicitudesHoy,
+      cuotasDetalleHoy,
+      montoCobradasHoy,
     ] = await Promise.all([
       DashboardRepository.countClientes(),
       DashboardRepository.countSolicitudes(),
@@ -28,6 +31,9 @@ export class DashboardService {
       DashboardRepository.getSolicitudesRecientes(10),
       DashboardRepository.getRevenueHistory(),
       DashboardRepository.getCollectionEfficiency(),
+      DashboardRepository.getSolicitudesHoy(),
+      DashboardRepository.getCuotasCobradasHoy(),
+      DashboardRepository.getMontoCobradasHoy(),
     ]);
 
     return {
@@ -40,8 +46,11 @@ export class DashboardService {
         cobradasHoy: cuotasCobradasHoy,
         vencidasHoy: cuotasVencidasHoy,
         vencidas30: cuotasVencidas30,
+        montoCobradasHoy,
       },
       recientes: solicitudesRecientes,
+      solicitudesHoy,
+      cuotasHoy: cuotasDetalleHoy,
       charts: {
         revenue: revenueHistory,
         efficiency,
