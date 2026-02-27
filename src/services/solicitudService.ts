@@ -15,7 +15,7 @@ export class SolicitudService {
     q?: string,
     page?: number,
     pageSize?: number,
-    filtro?: "pagadas" | "impagas" | "pendientes",
+    filtro?: "pagadas" | "bajas" | "pendientes",
   ): Promise<SolicitudResponse> {
     try {
       const result = await SolicitudRepository.getAllSolicitudes(

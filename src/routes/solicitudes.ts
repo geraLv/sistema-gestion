@@ -52,7 +52,7 @@ router.get("/", async (req: Request, res: Response) => {
     const q = typeof req.query.q === "string" ? req.query.q : undefined;
     const filtro = req.query.filtro as
       | "pagadas"
-      | "impagas"
+      | "bajas"
       | "pendientes"
       | undefined;
     const page = req.query.page ? Number(req.query.page) : undefined;
@@ -236,7 +236,7 @@ router.put("/:id", async (req: Request, res: Response) => {
       nroSolicitud,
       totalapagar: parseFloat(totalapagar),
       observacion: observacion || "",
-      selectEstado: parseInt(selectEstado, 10) || 1,
+      selectEstado: selectEstado !== undefined && selectEstado !== null ? parseInt(selectEstado, 10) : 1,
     };
 
     const before = await SolicitudService.obtenerSolicitud(idsolicitud);

@@ -1,0 +1,77 @@
+[
+  {
+    "id": "cd338b63-0b43-4910-8010-2a72cf683eb6",
+    "actor_user_id": 1,
+    "actor_username": "dev",
+    "action": "CREATE",
+    "entity": "solicitud",
+    "entity_id": "201",
+    "before": null,
+    "after": {
+      "monto": 1000,
+      "estado": 1,
+      "fechalta": "2026-02-13T16:23:49.013+00:00",
+      "idsolicitud": 201,
+      "observacion": "",
+      "relacliente": 1,
+      "totalapagar": 12000,
+      "nrosolicitud": 201,
+      "relaproducto": 4,
+      "relavendedor": 1,
+      "totalabonado": 0,
+      "cantidadcuotas": 12,
+      "porcentajepagado": 0
+    },
+    "created_at": "2026-02-13T16:23:50.64645+00:00",
+    "ip": "::1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0",
+    "request_id": "7edece55-1c91-4f68-ab92-a3e24d51f14d"
+  },
+  {
+    "id": "7713bed0-149c-41bf-9a8e-bcfa38e6873b",
+    "actor_user_id": 1,
+    "actor_username": "dev",
+    "action": "UPDATE",
+    "entity": "solicitud",
+    "entity_id": "200",
+    "before": {
+      "monto": 6242,
+      "estado": 1,
+      "cliente": {
+        "dni": "20000015",
+        "appynom": "Cliente Demo 015",
+        "telefono": "370-690152",
+        "direccion": "Calle 1539 #363",
+        "localidad": {
+          "nombre": "nombre"
+        }
+      },
+      "fechalta": "2026-02-08T14:16:11.981+00:00",
+      "producto": {
+        "descripcion": "producto"
+      },
+      "vendedor": {
+        "apellidonombre": "vendedor"
+      },
+      "idsolicitud": 200,
+      "observacion": "Demo",
+      "relacliente": 15,
+      "totalapagar": 6242,
+      "nrosolicitud": 200,
+      "relaproducto": 1,
+      "relavendedor": 1,
+      "totalabonado": 6242,
+      "cantidadcuotas": 1,
+      "porcentajepagado": 100
+    },
+    "after": {
+      "message": "Se agregaron 1 cuotas a la solicitud",
+      "success": true
+    },
+    "created_at": "2026-02-14T15:01:23.197521+00:00",
+    "ip": "::1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0",
+    "request_id": "194a17e9-7422-4b7a-980d-2672868fcce5"
+  }
+]
+Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76

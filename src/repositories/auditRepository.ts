@@ -46,7 +46,34 @@ export class AuditRepository {
       console.error("Error fetching audit logs:", error.message);
       throw new Error(`Error al obtener auditoría: ${error.message}`);
     }
-    return data || [];
+
+    const logs = data || [];
+
+    // Adjuntar nrosolicitud a los logs donde entity sea 'solicitud'
+    const solicitudIds = logs
+      .filter((l) => l.entity === "solicitud" && l.entity_id && !isNaN(Number(l.entity_id)))
+      .map((l) => Number(l.entity_id));
+
+    if (solicitudIds.length > 0) {
+      const { data: solicitudes } = await supabase
+        .from("solicitud")
+        .select("idsolicitud, nrosolicitud")
+        .in("idsolicitud", solicitudIds);
+
+      if (solicitudes && solicitudes.length > 0) {
+        const solMap = new Map();
+        solicitudes.forEach((s) => solMap.set(String(s.idsolicitud), s.nrosolicitud));
+
+        logs.forEach((l) => {
+          if (l.entity === "solicitud" && solMap.has(l.entity_id)) {
+            // Adjuntamos la propiedad en tiempo de respuesta a la API
+            l.nrosolicitud = solMap.get(l.entity_id);
+          }
+        });
+      }
+    }
+
+    return logs;
   }
 
   static async pruneOlderThan(days: number): Promise<void> {

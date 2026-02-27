@@ -11,7 +11,7 @@ export interface Solicitud {
   totalapagar: number;
   porcentajepagado: number;
   observacion?: string;
-  estado: number; // 0=activa, 1=baja
+  estado: number; // 0=baja/anulada, 1=activa/pendiente, 2=pagada
   fechalta?: string;
 }
 

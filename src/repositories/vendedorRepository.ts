@@ -44,7 +44,7 @@ export class VendedorRepository {
     const { data, error } = await supabase
       .from("vendedor")
       .select("*")
-      // .eq("estado", 1) // Column may not exist in database
+      .eq("estado", 1)
       .order("apellidonombre", { ascending: true });
 
     if (error) {
@@ -83,6 +83,7 @@ export class VendedorRepository {
       .insert([
         {
           apellidonombre,
+          estado,
         },
       ])
       .select()
@@ -124,14 +125,12 @@ export class VendedorRepository {
     idvendedor: number,
     estado: number,
   ): Promise<void> {
-    // Column 'estado' doesn't exist in database schema
-    // const { error } = await supabase
-    //   .from("vendedor")
-    //   .update({ estado })
-    //   .eq("idvendedor", idvendedor);
-    // if (error) {
-    //   throw new Error(`Error al actualizar estado: ${error.message}`);
-    // }
-    console.warn(`setVendedorStatus called but 'estado' column doesn't exist in database`);
+    const { error } = await supabase
+      .from("vendedor")
+      .update({ estado })
+      .eq("idvendedor", idvendedor);
+    if (error) {
+      throw new Error(`Error al actualizar estado: ${error.message}`);
+    }
   }
 }

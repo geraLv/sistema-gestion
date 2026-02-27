@@ -44,7 +44,7 @@ export class SolicitudRepository {
     q?: string,
     page?: number,
     pageSize?: number,
-    filtro?: "pagadas" | "impagas" | "pendientes",
+    filtro?: "pagadas" | "bajas" | "pendientes",
   ): Promise<{ data: SolicitudConDetalles[]; total: number }> {
     let query = supabase
       .from("solicitud")
@@ -60,7 +60,7 @@ export class SolicitudRepository {
 
     if (filtro === "pagadas") {
       query = query.eq("estado", 2);
-    } else if (filtro === "impagas") {
+    } else if (filtro === "bajas") {
       query = query.eq("estado", 0);
     } else if (filtro === "pendientes") {
       query = query.not("estado", "in", "(0,2)");
