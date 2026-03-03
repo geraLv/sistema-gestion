@@ -11,7 +11,7 @@ import { json } from "body-parser";
 import cookieParser from "cookie-parser";
 import Sentry from "@sentry/node";
 import { validateEnv } from "./config/validateEnv";
-import { globalLimiter, authLimiter, apiLimiter, strictLimiter } from "./middleware/rateLimiter";
+import { globalLimiter, authLimiter, apiLimiter, strictLimiter, portalLimiter } from "./middleware/rateLimiter";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "./config/swagger";
@@ -28,6 +28,7 @@ import productosRouter from "./routes/productos";
 import reportesRouter from "./routes/reportes";
 import adminRouter from "./routes/admin";
 import dashboardRouter from "./routes/dashboard";
+import portalClienteRouter from "./routes/portalCliente";
 
 // Validate environment variables
 validateEnv();
@@ -100,6 +101,7 @@ app.use("/api/productos", apiLimiter, authenticateToken, productosRouter);
 app.use("/api/reportes", apiLimiter, authenticateToken, reportesRouter);
 app.use("/api/admin", strictLimiter, authenticateToken, requireRole("admin"), adminRouter);
 app.use("/api/dashboard", apiLimiter, authenticateToken, dashboardRouter);
+app.use("/api/portal", portalLimiter, portalClienteRouter);
 
 // 404 handler for undefined routes (must be after all routes)
 app.use(notFoundHandler);

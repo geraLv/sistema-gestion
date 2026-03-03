@@ -22,10 +22,12 @@ export interface CuotaWithSolicitud extends Cuota {
 
 export interface PagarCuotaDTO {
   idcuota: number;
+  formapago?: string;
 }
 
 export interface PagarMultiplesCuotasDTO {
   idcuotas: number[];
+  formapago?: string;
 }
 
 export interface ModificarImporteCuotaDTO {

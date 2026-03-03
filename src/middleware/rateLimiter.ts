@@ -62,3 +62,18 @@ export const strictLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
 });
+
+/**
+ * Portal limiter - endpoints públicos de consulta de clientes
+ * Desarrollo: 50 req/min | Producción: 10 req/min
+ */
+export const portalLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minuto
+    max: isDevelopment ? 50 : 10,
+    message: {
+        success: false,
+        error: 'Demasiadas consultas. Por favor, espera un momento antes de intentar nuevamente.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});

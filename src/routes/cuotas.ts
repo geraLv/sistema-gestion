@@ -243,7 +243,7 @@ cuotasRouter.get(
  */
 cuotasRouter.post("/pagar", async (req: Request, res: Response) => {
   try {
-    const { idcuota } = req.body;
+    const { idcuota, formapago } = req.body;
 
     if (!idcuota) {
       return res.status(400).json({
@@ -253,9 +253,7 @@ cuotasRouter.post("/pagar", async (req: Request, res: Response) => {
     }
 
     const before = await CuotaRepository.getCuotaById(Number(idcuota));
-    // console.log(before);
-    const resultado = await CuotaService.pagarCuota({ idcuota });
-    console.log(resultado);
+    const resultado = await CuotaService.pagarCuota({ idcuota, formapago });
     const after = await CuotaRepository.getCuotaById(Number(idcuota));
 
     try {
@@ -289,7 +287,7 @@ cuotasRouter.post("/pagar", async (req: Request, res: Response) => {
  */
 cuotasRouter.post("/pagar-multiples", async (req: Request, res: Response) => {
   try {
-    const { idcuotas } = req.body;
+    const { idcuotas, formapago } = req.body;
 
     if (!idcuotas || !Array.isArray(idcuotas) || idcuotas.length === 0) {
       return res.status(400).json({
@@ -301,7 +299,7 @@ cuotasRouter.post("/pagar-multiples", async (req: Request, res: Response) => {
     const before = await Promise.all(
       idcuotas.map((id: number) => CuotaRepository.getCuotaById(Number(id))),
     );
-    const resultado = await CuotaService.pagarMultiplesCuotas({ idcuotas });
+    const resultado = await CuotaService.pagarMultiplesCuotas({ idcuotas, formapago });
     const after = await Promise.all(
       idcuotas.map((id: number) => CuotaRepository.getCuotaById(Number(id))),
     );
@@ -435,6 +433,50 @@ cuotasRouter.put("/:idcuota/fecha-pago", async (req: Request, res: Response) => 
   }
 });
 
+/**
+ * PUT /api/cuotas/:idcuota/formapago - Modificar forma de pago de una cuota
+ */
+cuotasRouter.put("/:idcuota/formapago", async (req: Request, res: Response) => {
+  try {
+    const { idcuota } = req.params;
+    const { formapago } = req.body;
+
+    if (!idcuota || isNaN(Number(idcuota))) {
+      return res.status(400).json({
+        success: false,
+        error: "idcuota inválido",
+      });
+    }
+
+    if (!formapago) {
+      return res.status(400).json({
+        success: false,
+        error: "formapago es requerido",
+      });
+    }
+
+    const { data: updated, error } = await supabase
+      .from("cuotas")
+      .update({ formapago })
+      .eq("idcuota", Number(idcuota))
+      .select()
+      .single();
+
+    if (error || !updated) {
+      throw new Error(error?.message || "No se pudo actualizar la forma de pago");
+    }
+
+    res.json({
+      success: true,
+      data: updated,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: (error as Error).message,
+    });
+  }
+});
 
 
 /**

@@ -33,7 +33,7 @@ export class CuotaRepository {
       .from("cuotas")
       .select(
         `
-        idcuota, relasolicitud, nrocuota, importe, vencimiento, estado, fecha,
+        idcuota, relasolicitud, nrocuota, importe, vencimiento, estado, fecha, formapago,
         solicitud:relasolicitud(
           nrosolicitud,
           idsolicitud,
@@ -178,7 +178,7 @@ export class CuotaRepository {
   /**
    * Pagar una cuota (actualizar estado a 2 y agregar fecha)
    */
-  static async pagarCuota(idcuota: number): Promise<Cuota> {
+  static async pagarCuota(idcuota: number, formapago?: string): Promise<Cuota> {
     const hoy = new Date().toISOString().split("T")[0];
 
     // Obtener cuota actual
@@ -187,13 +187,19 @@ export class CuotaRepository {
       throw new Error("Cuota no encontrada");
     }
     // Actualizar cuota
+    const payload: any = {
+      estado: 2,
+      fecha: hoy,
+      saldoanterior: Math.round(cuotaActual.importe),
+    };
+
+    if (formapago) {
+      payload.formapago = formapago;
+    }
+
     const { data: cuotaActualizada, error: errorCuota } = await supabase
       .from("cuotas")
-      .update({
-        estado: 2,
-        fecha: hoy,
-        saldoanterior: Math.round(cuotaActual.importe),
-      })
+      .update(payload)
       .eq("idcuota", idcuota)
       .select()
       .single();
@@ -366,7 +372,7 @@ export class CuotaRepository {
       .from("cuotas")
       .select(
         `
-        idcuota, relasolicitud, nrocuota, importe, vencimiento, estado, fecha,
+        idcuota, relasolicitud, nrocuota, importe, vencimiento, estado, fecha, formapago,
         solicitud:relasolicitud(
           idsolicitud,
           nrosolicitud,
