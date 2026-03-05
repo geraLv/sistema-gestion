@@ -231,35 +231,41 @@ export class ReporteRepository {
     mes: string,
     localidadId?: number,
   ): Promise<ReciboCuotaData[]> {
-    const { data, error } = await supabase
+    const [anio, mesNum] = mes.split("-").map(Number);
+    const ultimoDiaMes = new Date(anio, mesNum, 0).getDate();
+    const primerDia = `${mes}-01`;
+    const ultimoDia = `${mes}-${String(ultimoDiaMes).padStart(2, "0")}`;
+
+    let query = supabase
       .from("cuotas")
       .select(
         `
         idcuota, nrocuota, importe, vencimiento, estado, fecha,
-        solicitud:relasolicitud(
+        solicitud:relasolicitud!inner(
           nrosolicitud, estado,
-          cliente:relacliente(appynom, dni, direccion, telefono, relalocalidad, localidad:relalocalidad(nombre)),
+          cliente:relacliente!inner(appynom, dni, direccion, telefono, relalocalidad, localidad:relalocalidad(nombre)),
           producto:relaproducto(descripcion)
         )
-      `,
+      `
       )
-      .eq("estado", 0);
+      .eq("estado", 0)
+      .eq("solicitud.estado", 1)
+      .gte("vencimiento", primerDia)
+      .lte("vencimiento", ultimoDia)
+      .limit(5000);
+
+    if (localidadId !== undefined) {
+      query = query.eq("solicitud.cliente.relalocalidad", localidadId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching recibos mes:", error.message);
       throw new Error(`Error al obtener recibos del mes: ${error.message}`);
     }
 
-    if (process.env.DEBUG_REPORTES === "true") {
-      console.log("[reportes] recibos mes raw:", {
-        mes,
-        localidadId,
-        total: (data || []).length,
-        sample: (data || []).slice(0, 2),
-      });
-    }
-
-    const rows = (data || []).map((row: any) => {
+    const rows = (data || []).map((row) => {
       const solicitud = Array.isArray(row.solicitud)
         ? row.solicitud[0]
         : row.solicitud;
@@ -280,14 +286,12 @@ export class ReporteRepository {
         vencimiento: row.vencimiento,
         fecha: row.fecha ?? null,
         nrosolicitud: solicitud?.nrosolicitud || "",
-        solicitudEstado: solicitud?.estado ?? null,
         cliente: {
           appynom: cliente?.appynom || "",
           dni: cliente?.dni || "",
           direccion: cliente?.direccion || "",
           telefono: cliente?.telefono || "",
           localidad: localidad?.nombre || "",
-          relalocalidad: cliente?.relalocalidad ?? null,
         },
         producto: {
           descripcion: producto?.descripcion || "",
@@ -295,40 +299,7 @@ export class ReporteRepository {
       };
     });
 
-    const filtrados = rows
-      .filter((r) => Number(r.solicitudEstado) === 1)
-      .filter((r) => String(r.vencimiento || "").startsWith(mes))
-      .filter((r) =>
-        localidadId ? Number(r.cliente.relalocalidad) === localidadId : true,
-      );
-
-    if (process.env.DEBUG_REPORTES === "true") {
-      console.log("[reportes] recibos mes filtrados:", {
-        mes,
-        localidadId,
-        total: filtrados.length,
-        sample: filtrados.slice(0, 2),
-      });
-    }
-
-    return filtrados.map((r) => ({
-      idcuota: r.idcuota,
-      nrocuota: r.nrocuota,
-      importe: r.importe,
-      vencimiento: r.vencimiento,
-      fecha: r.fecha ?? null,
-      nrosolicitud: r.nrosolicitud,
-      cliente: {
-        appynom: r.cliente.appynom,
-        dni: r.cliente.dni,
-        direccion: r.cliente.direccion,
-        telefono: r.cliente.telefono,
-        localidad: r.cliente.localidad,
-      },
-      producto: {
-        descripcion: r.producto.descripcion,
-      },
-    }));
+    return rows as ReciboCuotaData[];
   }
 
   static async getSolicitudesReporteData(

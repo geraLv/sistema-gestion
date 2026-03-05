@@ -39,12 +39,14 @@ router.post("/recibos/cuota", async (req: Request, res: Response) => {
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `inline; filename=\"recibo-cuota-${idcuota}.pdf\"`,
+    `attachment; filename=\"recibo-cuota-${idcuota}.pdf\"`,
   );
+
+  const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibo(doc, data);
+  ReporteService.renderRecibo(doc, data, sinFecha);
   doc.end();
 });
 
@@ -71,7 +73,7 @@ router.post("/recibos/multiples", async (req: Request, res: Response) => {
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `inline; filename=\"recibos-multiples.pdf\"`,
+    `attachment; filename=\"recibos-multiples.pdf\"`,
   );
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -97,7 +99,7 @@ router.get(
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `inline; filename=\"monitor-solicitud-${idsolicitud}.pdf\"`,
+        `attachment; filename=\"monitor-solicitud-${idsolicitud}.pdf\"`,
       );
 
       const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -136,7 +138,7 @@ router.get(
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `inline; filename=\"recibos-solicitud-${idsolicitud}.pdf\"`,
+        `attachment; filename=\"recibos-solicitud-${idsolicitud}.pdf\"`,
       );
 
       const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -171,7 +173,7 @@ router.get("/recibos/solicitud/:idsolicitud", async (req: Request, res: Response
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `inline; filename=\"recibos-solicitud-${idsolicitud}.pdf\"`,
+    `attachment; filename=\"recibos-solicitud-${idsolicitud}.pdf\"`,
   );
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -188,7 +190,7 @@ router.get(
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `inline; filename=\"reporte-analisis-cartera.pdf\"`,
+        `attachment; filename=\"reporte-analisis-cartera.pdf\"`,
       );
 
       const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -210,7 +212,7 @@ router.get(
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `inline; filename=\"reporte-mora.pdf\"`,
+        `attachment; filename=\"reporte-mora.pdf\"`,
       );
 
       const doc = new PDFDocument({ size: "A4", margin: 40 });
@@ -320,12 +322,14 @@ router.get("/recibos/mes", async (req: Request, res: Response, next: NextFunctio
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `inline; filename=\"recibos-${mes}.pdf\"`,
+    `attachment; filename=\"recibos-${mes}.pdf\"`,
   );
+
+  const sinFecha = req.query?.sinFecha === "true";
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosMes(doc, recibos, mes);
+  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha);
   doc.end();
 });
 
@@ -359,12 +363,14 @@ router.get("/recibos/mes-posterior", async (req: Request, res: Response, next: N
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `inline; filename=\"recibos-${mes}.pdf\"`,
+    `attachment; filename=\"recibos-${mes}.pdf\"`,
   );
+
+  const sinFecha = req.query?.sinFecha === "true";
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosMes(doc, recibos, mes);
+  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha);
   doc.end();
 });
 
@@ -399,12 +405,14 @@ router.get("/recibos/mes-por-localidad", async (req: Request, res: Response, nex
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `inline; filename=\"recibos-${mes}-loc-${localidadId}.pdf\"`,
+    `attachment; filename=\"recibos-${mes}-loc-${localidadId}.pdf\"`,
   );
+
+  const sinFecha = req.query?.sinFecha === "true";
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosMes(doc, recibos, mes);
+  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha);
   doc.end();
 });
 
@@ -435,12 +443,14 @@ router.get("/recibos/mes-posterior-por-localidad", async (req: Request, res: Res
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `inline; filename=\"recibos-${mes}-loc-${localidadId}.pdf\"`,
+    `attachment; filename=\"recibos-${mes}-loc-${localidadId}.pdf\"`,
   );
+
+  const sinFecha = req.query?.sinFecha === "true";
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosMes(doc, recibos, mes);
+  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha);
   doc.end();
 });
 
@@ -464,7 +474,7 @@ router.get("/solicitudes/monitor", async (req: Request, res: Response, next: Nex
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `inline; filename=\"monitor-solicitud-${nroSolicitud}.pdf\"`,
+    `attachment; filename=\"monitor-solicitud-${nroSolicitud}.pdf\"`,
   );
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });

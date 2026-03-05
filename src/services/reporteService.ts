@@ -37,7 +37,7 @@ export class ReporteService {
     return ReporteRepository.getRecibosMultiplesData(idcuotas);
   }
 
-  static renderRecibo(doc: typeof PDFDocument, data: ReciboCuotaData): void {
+  static renderRecibo(doc: typeof PDFDocument, data: ReciboCuotaData, sinFecha = false): void {
     // Helper para convertir mm a puntos (1mm approx 2.835 points)
     const mm = (val: number) => val * 2.83465;
     const formatFechaEs = (value?: string | null) => {
@@ -118,42 +118,49 @@ export class ReporteService {
         .fillColor("#189092")
         .text("Crédito - Gestión", mm(56), mm(logoY + 3));
 
+      // Razón Social
+      doc
+        .font("Times-Bold")
+        .fontSize(18)
+        .fillColor("#000000")
+        .text('"CCGGROUP S.A.S."', mm(65), mm(logoY + 12));
+
       // Dirección
       doc
         .font("Times-Roman")
-        .fontSize(12)
+        .fontSize(11)
         .fillColor("#17202A")
         .text(
           "Casa Central: Formosa Capital. Scozzina 445 Bº San Miguel",
           mm(51),
-          mm(logoY + 12),
+          mm(logoY + 19),
         );
 
       // Web
       doc
         .fontSize(9)
         .fillColor("#1F9BAF")
-        .text("CREDITOGESTION.COM.AR", mm(53), mm(logoY + 17), {
+        .text("CREDITOGESTION.COM.AR", mm(53), mm(logoY + 23), {
           underline: true,
         });
 
       // Facebook
       doc
-        .fontSize(12)
+        .fontSize(11)
         .fillColor("#17202A")
-        .text("Facebook: credito gestion 1", mm(95), mm(logoY + 17), {
+        .text("Facebook: credito gestion 1", mm(95), mm(logoY + 23), {
           underline: false,
         });
 
       // Tel y CUIT
       doc
         .text(
-          "Tel: 370-5048282 C.U.I.T: 27-35387794-7",
+          "Tel: 370-5048282 C.U.I.T: 30-71931515-8",
           mm(60),
-          mm(logoY + 22),
+          mm(logoY + 27),
         );
 
-      doc.text("Responsable Inscripto", mm(77), mm(logoY + 27));
+      doc.text("Responsable Inscripto", mm(77), mm(logoY + 31));
 
       // ORIGINAL / DUPLICADO
       doc
@@ -172,12 +179,14 @@ export class ReporteService {
       doc.fillColor("#17202A").font("Times-Roman").fontSize(10);
       doc.text("DIA - MES - AÑO", mm(155), mm(logoY + 15));
 
-      const fechaRecibo =
-        formatFechaEs(data.fecha) || new Date().toLocaleDateString("es-AR");
-      doc
-        .font("Times-Bold")
-        .fontSize(12)
-        .text(fechaRecibo, mm(155), mm(logoY + 21)); // Inside box
+      if (!sinFecha) {
+        const fechaRecibo =
+          formatFechaEs(data.fecha) || new Date().toLocaleDateString("es-AR");
+        doc
+          .font("Times-Bold")
+          .fontSize(12)
+          .text(fechaRecibo, mm(155), mm(logoY + 21)); // Inside box
+      }
 
       // 2. Barra Verde Título
       doc
@@ -289,13 +298,14 @@ export class ReporteService {
     doc: typeof PDFDocument,
     recibos: ReciboCuotaData[],
     mes: string,
+    sinFecha = false,
   ): void {
     recibos.forEach((recibo, index) => {
       if (index > 0) {
         doc.addPage();
       }
       doc.fontSize(10).text(`Mes: ${mes}`, { align: "right" });
-      this.renderRecibo(doc, recibo);
+      this.renderRecibo(doc, recibo, sinFecha);
     });
   }
 
