@@ -236,36 +236,53 @@ export class ReporteRepository {
     const primerDia = `${mes}-01`;
     const ultimoDia = `${mes}-${String(ultimoDiaMes).padStart(2, "0")}`;
 
-    let query = supabase
-      .from("cuotas")
-      .select(
+    let allData: any[] = [];
+    let from = 0;
+    const step = 1000;
+
+    while (true) {
+      let query = supabase
+        .from("cuotas")
+        .select(
+          `
+          idcuota, nrocuota, importe, vencimiento, estado, fecha,
+          solicitud:relasolicitud!inner(
+            nrosolicitud, estado,
+            cliente:relacliente!inner(appynom, dni, direccion, telefono, relalocalidad, localidad:relalocalidad(nombre)),
+            producto:relaproducto(descripcion)
+          )
         `
-        idcuota, nrocuota, importe, vencimiento, estado, fecha,
-        solicitud:relasolicitud!inner(
-          nrosolicitud, estado,
-          cliente:relacliente!inner(appynom, dni, direccion, telefono, relalocalidad, localidad:relalocalidad(nombre)),
-          producto:relaproducto(descripcion)
         )
-      `
-      )
-      .eq("estado", 0)
-      .eq("solicitud.estado", 1)
-      .gte("vencimiento", primerDia)
-      .lte("vencimiento", ultimoDia)
-      .limit(5000);
+        .eq("estado", 0)
+        .eq("solicitud.estado", 1)
+        .gte("vencimiento", primerDia)
+        .lte("vencimiento", ultimoDia)
+        .order("idcuota", { ascending: true })
+        .range(from, from + step - 1);
 
-    if (localidadId !== undefined) {
-      query = query.eq("solicitud.cliente.relalocalidad", localidadId);
+      if (localidadId !== undefined) {
+        query = query.eq("solicitud.cliente.relalocalidad", localidadId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching recibos mes:", error.message);
+        throw new Error(`Error al obtener recibos del mes: ${error.message}`);
+      }
+
+      const rowsChunk = data || [];
+      if (rowsChunk.length > 0) {
+        allData = allData.concat(rowsChunk);
+      }
+
+      if (rowsChunk.length < step) {
+        break;
+      }
+      from += step;
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error fetching recibos mes:", error.message);
-      throw new Error(`Error al obtener recibos del mes: ${error.message}`);
-    }
-
-    const rows = (data || []).map((row) => {
+    const rows = allData.map((row) => {
       const solicitud = Array.isArray(row.solicitud)
         ? row.solicitud[0]
         : row.solicitud;
@@ -309,25 +326,43 @@ export class ReporteRepository {
   ): Promise<SolicitudReporteRow[]> {
     const vencimientoMes = `${mes}-20`;
 
-    const { data, error } = await supabase
-      .from("cuotas")
-      .select(
-        `
-        nrocuota, importe, vencimiento, estado, relasolicitud,
-        solicitud:relasolicitud(
-          idsolicitud, nrosolicitud, estado,
-          cliente:relacliente(appynom, telefono),
-          producto:relaproducto(descripcion)
-        )
-      `,
-      )
-      .eq("vencimiento", vencimientoMes);
+    let allData: any[] = [];
+    let from = 0;
+    const step = 1000;
 
-    if (error) {
-      throw new Error(`Error al obtener solicitudes: ${error.message}`);
+    while (true) {
+      const { data, error } = await supabase
+        .from("cuotas")
+        .select(
+          `
+          idcuota, nrocuota, importe, vencimiento, estado, relasolicitud,
+          solicitud:relasolicitud(
+            idsolicitud, nrosolicitud, estado,
+            cliente:relacliente(appynom, telefono),
+            producto:relaproducto(descripcion)
+          )
+        `,
+        )
+        .eq("vencimiento", vencimientoMes)
+        .order("idcuota", { ascending: true })
+        .range(from, from + step - 1);
+
+      if (error) {
+        throw new Error(`Error al obtener solicitudes: ${error.message}`);
+      }
+
+      const rowsChunk = data || [];
+      if (rowsChunk.length > 0) {
+        allData = allData.concat(rowsChunk);
+      }
+
+      if (rowsChunk.length < step) {
+        break;
+      }
+      from += step;
     }
 
-    const rows = (data || []).map((row: any) => {
+    const rows = allData.map((row: any) => {
       const solicitud = Array.isArray(row.solicitud)
         ? row.solicitud[0]
         : row.solicitud;

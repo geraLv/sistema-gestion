@@ -63,7 +63,6 @@ export class ReporteService {
       heightMm: number = 6,
     ) => {
       const yPt = mm(yMm);
-      const valYPt = mm(yMm - 4); // Ajuste visual para alinear con caja
 
       // Label
       doc
@@ -77,13 +76,29 @@ export class ReporteService {
         .rect(mm(valXMm), mm(yMm - 1), mm(widthMm), mm(heightMm))
         .stroke();
 
+      // Dynamic Font Scaling to prevent overflow
+      let size = 12;
+      doc.font("Times-Roman").fontSize(size);
+
+      const maxWidth = mm(widthMm) - 2;
+      let textWidth = doc.widthOfString(value);
+
+      while (textWidth > maxWidth && size > 6) {
+        size -= 0.5;
+        doc.fontSize(size);
+        textWidth = doc.widthOfString(value);
+      }
+
+      // Calculate vertical offset to keep it centered when smaller
+      const yOffset = (12 - size) / 2;
+
       // Value centered in box
       doc
-        .font("Times-Roman")
-        .fontSize(12)
-        .text(value, mm(valXMm), yPt + 2, {
+        .text(value, mm(valXMm), yPt + 2 + yOffset, {
           width: mm(widthMm),
+          height: mm(heightMm - 2),
           align: "center",
+          lineBreak: false,
         });
     };
 

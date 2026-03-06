@@ -427,35 +427,48 @@ export class SolicitudRepository {
     cantidadNueva: number,
   ): Promise<void> {
     // Obtén la última cuota para calcular el siguiente vencimiento
-    const { data: ultimaCuota, error: errorCuota } = await supabase
+    const { data: ultimasCuotas, error: errorCuota } = await supabase
       .from("cuotas")
       .select("*")
       .eq("relasolicitud", idsolicitud)
       .order("nrocuota", { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
 
-    if (errorCuota) {
+    if (errorCuota && errorCuota.code !== 'PGRST116') {
       throw new Error(`Error al obtener última cuota: ${errorCuota.message}`);
     }
 
     // Obtén monto de la solicitud
     const { data: solicitud, error: errorSol } = await supabase
       .from("solicitud")
-      .select("monto, cantidadcuotas, totalapagar")
+      .select("monto, cantidadcuotas, totalapagar, fechaventa, totalabonado")
       .eq("idsolicitud", idsolicitud)
       .single();
 
-    if (errorSol) {
-      throw new Error(`Error al obtener solicitud: ${errorSol.message}`);
+    if (errorSol || !solicitud) {
+      throw new Error(`Error al obtener solicitud: ${errorSol?.message || "No encontrada"}`);
     }
 
-    // Obtén monto de la última cuota para mantener consistencia
-    const valorCuota = ultimaCuota.importe;
+    let valorCuota = 0;
+    let proxNrocuota = 1;
+    let proxVencimiento = new Date();
 
-    // Calcular fechas
-    const proxNrocuota = ultimaCuota.nrocuota + 1;
-    let proxVencimiento = new Date(ultimaCuota.vencimiento);
+    if (ultimasCuotas && ultimasCuotas.length > 0) {
+      const ultimaCuota = ultimasCuotas[0];
+      valorCuota = ultimaCuota.importe;
+      proxNrocuota = ultimaCuota.nrocuota + 1;
+      proxVencimiento = new Date(ultimaCuota.vencimiento);
+    } else {
+      // Si no hay cuotas, intentamos derivar el importe de la solicitud
+      if (solicitud.cantidadcuotas && solicitud.cantidadcuotas > 0 && solicitud.totalapagar > 0) {
+        valorCuota = solicitud.totalapagar / solicitud.cantidadcuotas;
+      } else if (solicitud.monto > 0) {
+        valorCuota = solicitud.monto / cantidadNueva;
+      }
+      if (solicitud.fechaventa) {
+        proxVencimiento = new Date(solicitud.fechaventa);
+      }
+    }
 
     const cuotasArray = [];
 
@@ -465,7 +478,7 @@ export class SolicitudRepository {
       cuotasArray.push({
         relasolicitud: idsolicitud,
         nrocuota: proxNrocuota + i,
-        importe: valorCuota,
+        importe: Math.round(valorCuota * 100) / 100, // redondeo para prevenir decimales largos
         vencimiento: proxVencimiento.toISOString().split("T")[0],
         estado: 0,
         saldoanterior: 0,
