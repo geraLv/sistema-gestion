@@ -164,7 +164,12 @@ export class SolicitudService {
 
       // Crear cuotas automáticamente
       try {
-        const valorCuota = dto.totalapagar / dto.selectCuotas;
+        // En lugar de forzar división, tomamos el "Monto Base" que el usuario especificó
+        // o hacemos callback a la división si es 0 / inválido
+        const valorCuota = (dto.monto && dto.monto > 0)
+          ? dto.monto
+          : (dto.totalapagar / dto.selectCuotas);
+
         await SolicitudRepository.createCuotas(
           solicitud.idsolicitud,
           dto.selectCuotas,
@@ -264,7 +269,6 @@ export class SolicitudService {
         };
       }
 
-      console.log("paso el coso", cantidadNueva);
       if (!Number.isInteger(cantidadNueva) || cantidadNueva <= 0) {
         return {
           success: false,
@@ -281,9 +285,9 @@ export class SolicitudService {
         };
       }
 
-
       // Agregar cuotas
       await SolicitudRepository.adicionarCuotas(idsolicitud, cantidadNueva);
+      console.log("paso el coso", cantidadNueva);
 
       return {
         success: true,
@@ -409,7 +413,6 @@ export class SolicitudService {
 
     // Removido validación de nroSolicitud porque en el edit del frontend
     // se envía como string vacío para no sobreescribir el existente generado por DB.
-
 
     return { valid: true };
   }

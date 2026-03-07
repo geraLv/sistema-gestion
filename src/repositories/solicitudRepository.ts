@@ -393,7 +393,7 @@ export class SolicitudRepository {
     }
 
     const { error } = await supabase.from("cuotas").insert(cuotasArray);
-    console.log("erro:", error)
+    console.log("erro:", error);
     if (error) {
       console.error("Error creating cuotas:", error.message);
       throw new Error(`Error al crear cuotas: ${error.message}`);
@@ -434,45 +434,65 @@ export class SolicitudRepository {
       .order("nrocuota", { ascending: false })
       .limit(1);
 
-    if (errorCuota && errorCuota.code !== 'PGRST116') {
+    if (errorCuota && errorCuota.code !== "PGRST116") {
       throw new Error(`Error al obtener última cuota: ${errorCuota.message}`);
     }
-
     // Obtén monto de la solicitud
     const { data: solicitud, error: errorSol } = await supabase
       .from("solicitud")
-      .select("monto, cantidadcuotas, totalapagar, fechaventa, totalabonado")
+      .select("monto, cantidadcuotas, totalapagar, fechalta, totalabonado")
       .eq("idsolicitud", idsolicitud)
       .single();
 
+    console.log(solicitud, errorSol);
     if (errorSol || !solicitud) {
-      throw new Error(`Error al obtener solicitud: ${errorSol?.message || "No encontrada"}`);
+      throw new Error(
+        `Error al obtener solicitud: ${errorSol?.message || "No encontrada"}`,
+      );
     }
 
     let valorCuota = 0;
     let proxNrocuota = 1;
-    let proxVencimiento = new Date();
+    let proxVencimiento: Date;
 
     if (ultimasCuotas && ultimasCuotas.length > 0) {
+      // Hay cuotas existentes: continuar desde la última
       const ultimaCuota = ultimasCuotas[0];
       valorCuota = ultimaCuota.importe;
       proxNrocuota = ultimaCuota.nrocuota + 1;
       proxVencimiento = new Date(ultimaCuota.vencimiento);
     } else {
-      // Si no hay cuotas, intentamos derivar el importe de la solicitud
-      if (solicitud.cantidadcuotas && solicitud.cantidadcuotas > 0 && solicitud.totalapagar > 0) {
-        valorCuota = solicitud.totalapagar / solicitud.cantidadcuotas;
-      } else if (solicitud.monto > 0) {
-        valorCuota = solicitud.monto / cantidadNueva;
+      // Sin cuotas: usar monto base de la solicitud como valor de cada cuota
+      // `monto` es el valor unitario por cuota (precio base)
+      if (solicitud.monto && solicitud.monto > 0) {
+        valorCuota = solicitud.monto;
+      } else if (solicitud.totalapagar > 0 && cantidadNueva > 0) {
+        // Fallback: dividir el total a pagar entre la cantidad a generar
+        valorCuota = solicitud.totalapagar / cantidadNueva;
       }
-      if (solicitud.fechaventa) {
-        proxVencimiento = new Date(solicitud.fechaventa);
+
+      // Calcular fecha de inicio (igual que createCuotas: día 20)
+      const hoy = new Date();
+      proxVencimiento = new Date(hoy.getFullYear(), hoy.getMonth(), 20);
+      // Si ya pasó el día 20, comenzar desde el próximo mes
+      if (hoy.getDate() > 20) {
+        proxVencimiento.setMonth(proxVencimiento.getMonth() + 1);
       }
+      // La iteración del loop ya le suma +1 mes, entonces retrocedemos 1 mes
+      proxVencimiento.setMonth(proxVencimiento.getMonth() - 1);
+    }
+
+    // Verificar que el valor de cuota sea válido
+    if (!Number.isFinite(valorCuota) || valorCuota <= 0) {
+      throw new Error(
+        "No se puede determinar el importe de la cuota. Por favor, verifique que la solicitud tenga un monto base o total a pagar válido.",
+      );
     }
 
     const cuotasArray = [];
 
     for (let i = 0; i < cantidadNueva; i++) {
+      proxVencimiento = new Date(proxVencimiento);
       proxVencimiento.setMonth(proxVencimiento.getMonth() + 1);
 
       cuotasArray.push({
@@ -500,7 +520,6 @@ export class SolicitudRepository {
     const nuevoTotalAPagar = (solicitud.totalapagar || 0) + montoAgregado;
 
     // Recalcular porcentaje
-    // Necesitamos el total abonado actual
     const { data: solActual } = await supabase
       .from("solicitud")
       .select("totalabonado")
@@ -508,23 +527,22 @@ export class SolicitudRepository {
       .single();
 
     const totalAbonado = solActual?.totalabonado || 0;
-    const nuevoPorcentaje = (totalAbonado * 100) / nuevoTotalAPagar;
+    const nuevoPorcentaje =
+      nuevoTotalAPagar > 0 ? (totalAbonado * 100) / nuevoTotalAPagar : 0;
 
     // Actualiza solicitud
-    const nuevaCant = solicitud.cantidadcuotas + cantidadNueva;
+    const nuevaCant = (solicitud.cantidadcuotas || 0) + cantidadNueva;
     const { error: errorUpdate } = await supabase
       .from("solicitud")
       .update({
         cantidadcuotas: nuevaCant,
-        totalapagar: nuevoTotalAPagar,
-        porcentajepagado: Math.round(nuevoPorcentaje * 100) / 100
+        totalapagar: Math.round(nuevoTotalAPagar * 100) / 100,
+        porcentajepagado: Math.round(nuevoPorcentaje * 100) / 100,
       })
       .eq("idsolicitud", idsolicitud);
 
     if (errorUpdate) {
-      throw new Error(
-        `Error al actualizar solicitud: ${errorUpdate.message}`,
-      );
+      throw new Error(`Error al actualizar solicitud: ${errorUpdate.message}`);
     }
   }
 
@@ -591,7 +609,11 @@ export class SolicitudRepository {
     iduser: number,
     page?: number,
     pageSize?: number,
-  ): Promise<{ data: SolicitudConDetalles[]; total: number; kpis: MisVentasKPIs }> {
+  ): Promise<{
+    data: SolicitudConDetalles[];
+    total: number;
+    kpis: MisVentasKPIs;
+  }> {
     // KPI Query
     const { data: allUserSales, error: errorKpi } = await supabase
       .from("solicitud")
@@ -607,7 +629,10 @@ export class SolicitudRepository {
 
     if (!errorKpi && allUserSales) {
       kpis = {
-        totalImporte: allUserSales.reduce((acc: number, v: any) => acc + (v.totalapagar || 0), 0),
+        totalImporte: allUserSales.reduce(
+          (acc: number, v: any) => acc + (v.totalapagar || 0),
+          0,
+        ),
         activas: allUserSales.filter((v: any) => v.estado === 1).length,
         pagadas: allUserSales.filter((v: any) => v.estado === 2).length,
         bajas: allUserSales.filter((v: any) => v.estado === 0).length,
