@@ -37,6 +37,7 @@ export interface SolicitudConDetalles extends Solicitud {
   localidad_nombre?: string;
   cuotas_pagadas?: number;
   total_pagado?: number;
+  contratos?: any[];
 }
 
 export interface CreateSolicitudDTO {

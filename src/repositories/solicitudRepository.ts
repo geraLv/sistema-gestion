@@ -52,7 +52,8 @@ export class SolicitudRepository {
         `
         *,
         cliente(appynom, dni, direccion, telefono, localidad(nombre)),
-        producto(descripcion)
+        producto(descripcion),
+        contratos(estado, token_acceso, url_pdf_firmado)
       `,
         { count: "exact" },
       )
@@ -198,7 +199,8 @@ export class SolicitudRepository {
         `
         *,
         cliente(appynom, dni, direccion, telefono, localidad(nombre)),
-        producto(descripcion)
+        producto(descripcion),
+        contratos(estado, token_acceso, url_pdf_firmado)
       `,
       )
       .eq("idsolicitud", idsolicitud)
@@ -224,7 +226,8 @@ export class SolicitudRepository {
         `
         *,
         cliente(appynom, dni, direccion, telefono, localidad(nombre)),
-        producto(descripcion)
+        producto(descripcion),
+        contratos(estado, token_acceso, url_pdf_firmado)
       `,
       )
       .eq("nrosolicitud", nrosolicitud)
@@ -573,7 +576,8 @@ export class SolicitudRepository {
         *,
         cliente(appynom, telefono),
         producto(descripcion),
-        cuotas(estado, importe)
+        cuotas(estado, importe),
+        contratos(estado, token_acceso, url_pdf_firmado)
       `);
 
     const hoy = new Date().toISOString().split("T")[0];
@@ -645,7 +649,8 @@ export class SolicitudRepository {
         `
         *,
         cliente(appynom, dni, direccion, telefono, localidad(nombre)),
-        producto(descripcion)
+        producto(descripcion),
+        contratos(estado, token_acceso, url_pdf_firmado)
       `,
         { count: "exact" },
       )

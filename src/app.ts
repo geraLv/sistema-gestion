@@ -29,6 +29,7 @@ import reportesRouter from "./routes/reportes";
 import adminRouter from "./routes/admin";
 import dashboardRouter from "./routes/dashboard";
 import portalClienteRouter from "./routes/portalCliente";
+import contratosRouter from "./routes/contratos";
 
 // Validate environment variables
 validateEnv();
@@ -79,7 +80,8 @@ app.use(
 
 // Body parsing
 app.use(cookieParser());
-app.use(json());
+app.use(json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // Health check (no auth required)
 app.get("/health", (req, res) => {
@@ -102,6 +104,7 @@ app.use("/api/reportes", apiLimiter, authenticateToken, reportesRouter);
 app.use("/api/admin", strictLimiter, authenticateToken, requireRole("admin"), adminRouter);
 app.use("/api/dashboard", apiLimiter, authenticateToken, dashboardRouter);
 app.use("/api/portal", portalLimiter, portalClienteRouter);
+app.use("/api/contratos", apiLimiter, contratosRouter);
 
 // 404 handler for undefined routes (must be after all routes)
 app.use(notFoundHandler);
