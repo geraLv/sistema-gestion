@@ -291,11 +291,6 @@ export class CuotaRepository {
       throw new Error("Cuota no encontrada");
     }
 
-    // Si la cuota está pagada, no permitir cambio
-    if (cuotaActual.estado === 2) {
-      throw new Error("No se puede modificar el importe de una cuota pagada");
-    }
-
     // Actualizar cuota
     const { data, error } = await supabase
       .from("cuotas")
