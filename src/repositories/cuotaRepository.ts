@@ -21,6 +21,41 @@ export class CuotaRepository {
   }
 
   /**
+   * Obtiene el idcuota de la última cuota pagada para un nrosolicitud
+   */
+  static async getLastPaidCuotaByNroSolicitud(nrosolicitud: string): Promise<number | null> {
+    // 1. Obtener el idsolicitud
+    const { data: solData, error: solError } = await supabase
+      .from("solicitud")
+      .select("idsolicitud")
+      .eq("nrosolicitud", nrosolicitud)
+      .single();
+
+    if (solError || !solData) {
+      console.error("Error fetching solicitud by nrosolicitud:", solError?.message);
+      return null;
+    }
+
+    // 2. Obtener la última cuota pagada
+    const { data: cuotaData, error: cuotaError } = await supabase
+      .from("cuotas")
+      .select("idcuota")
+      .eq("relasolicitud", solData.idsolicitud)
+      .eq("estado", 2)
+      .order("nrocuota", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (cuotaError && cuotaError.code !== "PGRST116") {
+      console.error("Error fetching last paid cuota:", cuotaError.message);
+      return null;
+    }
+
+    return cuotaData?.idcuota || null;
+  }
+
+
+  /**
    * Obtiene cuotas con información de solicitud y cliente
    */
   static async getCuotasWithDetails(

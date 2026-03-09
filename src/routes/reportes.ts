@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import PDFDocument from "pdfkit";
 import { ReporteService } from "../services/reporteService";
 import { SolicitudService } from "../services/solicitudService";
+import { CuotaService } from "../services/cuotaService";
 
 const router = Router();
 
@@ -43,6 +44,48 @@ router.post("/recibos/cuota", async (req: Request, res: Response) => {
   );
 
   const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
+
+  const doc = new PDFDocument({ size: "A4", margin: 40 });
+  doc.pipe(res);
+  ReporteService.renderRecibo(doc, data, sinFecha);
+  doc.end();
+});
+
+router.get("/recibos/ultima-pagada/:nrosolicitud", async (req: Request, res: Response) => {
+  const nrosolicitud = req.params.nrosolicitud;
+
+  if (!nrosolicitud || nrosolicitud.trim() === "") {
+    return res.status(400).json({
+      success: false,
+      error: "nrosolicitud inválido",
+    });
+  }
+
+  // Find the last paid cuota for this nrosolicitud
+  const idcuota = await CuotaService.obtenerUltimaCuotaPagadaPorNroSolicitud(nrosolicitud);
+
+  if (!idcuota) {
+    return res.status(404).json({
+      success: false,
+      error: "La solicitud no tiene cuotas pagadas o no existe",
+    });
+  }
+
+  const data = await ReporteService.getReciboCuota(idcuota);
+  if (!data) {
+    return res.status(404).json({
+      success: false,
+      error: "Recibo no encontrado",
+    });
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=\"recibo-ultima-pagada-${nrosolicitud}.pdf\"`,
+  );
+
+  const sinFecha = req.query?.sinFecha === "true";
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
