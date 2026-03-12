@@ -13,6 +13,15 @@ import { CargarAdelantoDTO } from "../types/adelanto";
 
 export class CuotaService {
   /**
+   * Obtiene el id de la última cuota pagada para un nrosolicitud
+   */
+  static async obtenerUltimaCuotaPagadaPorNroSolicitud(
+    nrosolicitud: string,
+  ): Promise<number | null> {
+    return CuotaRepository.getLastPaidCuotaByNroSolicitud(nrosolicitud);
+  }
+
+  /**
    * Pagar una cuota y actualizar solicitud
    */
   static async pagarCuota(dto: PagarCuotaDTO): Promise<PagarCuotaResponse> {
