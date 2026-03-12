@@ -14,9 +14,24 @@ export class PdfService {
      */
     static async generarContratoPendiente(solicitud: SolicitudConDetalles, datosContrato?: any): Promise<{ url: string, token: string }> {
         try {
-            // 1. Cargar el template PDF
-            // Ajustar path relativo según estructura, asumiendo que está en la raíz de sistema-migrado
-            const templatePath = process.env.TEMPLATE_PDF_PATH || path.join(__dirname, '../../..', 'SOLICITUD .pdf');
+            let templatePath = process.env.TEMPLATE_PDF_PATH;
+            if (!templatePath) {
+                const pathsToTry = [
+                    path.join(__dirname, '../../..', 'SOLICITUD .pdf'), // relative from dist/services
+                    path.join(process.cwd(), '../SOLICITUD .pdf'),      // relative from backend execution
+                    path.join(process.cwd(), 'SOLICITUD .pdf'),         // if executed from root
+                    path.resolve(__dirname, '../../../SOLICITUD .pdf')
+                ];
+                for (const p of pathsToTry) {
+                    if (fs.existsSync(p)) {
+                        templatePath = p;
+                        break;
+                    }
+                }
+                if (!templatePath) {
+                    templatePath = pathsToTry[0]; // fallback so error message is descriptive
+                }
+            }
 
             let pdfBytes: Uint8Array;
             try {
