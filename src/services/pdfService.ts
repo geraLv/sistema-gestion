@@ -20,7 +20,7 @@ export class PdfService {
 
             let pdfBytes: Uint8Array;
             try {
-                pdfBytes = fs.readFileSync(templatePath);
+                pdfBytes = await fs.promises.readFile(templatePath);
             } catch (err) {
                 console.warn(`No se encontró el PDF en ${templatePath}. Usando documento en blanco de prueba.`);
                 const emptyPdf = await PDFDocument.create();
@@ -140,6 +140,11 @@ export class PdfService {
             drawText(aclaracionProductor, 469, 55);
 
             // Firma Productor
+            if (d.firmaProductor && typeof d.firmaProductor === "string" && d.firmaProductor.length > 200000) {
+                console.warn(`Firma productor ignorada por ser demasiado pesada: ${d.firmaProductor.length} chars`);
+                d.firmaProductor = null; // Prevent processing excessively large base64 strings (Out of memory risk)
+            }
+
             if (d.firmaProductor) {
                 try {
                     const base64Data = d.firmaProductor.replace(/^data:image\/(png|jpeg);base64,/, "");
@@ -152,6 +157,15 @@ export class PdfService {
                         width: 119,
                         height: 49,
                     });
+
+                    if (secondPage) {
+                        secondPage.drawImage(signatureImage, {
+                            x: 89,
+                            y: 30,
+                            width: 136,
+                            height: 48,
+                        });
+                    }
                 } catch (e) {
                     console.error("Error estampar firma productor:", e);
                 }
@@ -160,6 +174,7 @@ export class PdfService {
             // Escribimos en la PÁGINA 2
             if (secondPage) {
                 drawText(clienteNombre, 211, 799, secondPage);
+                drawText(aclaracionProductor, 373, 53, secondPage);
             }
 
             // 3. Serializar y guardar

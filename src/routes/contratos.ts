@@ -6,9 +6,13 @@ import { ContratoRepository } from "../repositories/contratoRepository";
 import { SolicitudRepository } from "../repositories/solicitudRepository";
 import { PdfService } from "../services/pdfService";
 import { authenticateToken } from "./auth";
+import { strictLimiter } from "../middleware/rateLimiter";
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit to prevent OOM
+});
 
 /**
  * POST /api/contratos/generar
@@ -16,10 +20,23 @@ const upload = multer({ storage: multer.memoryStorage() });
  */
 router.post("/generar", authenticateToken, async (req: any, res: any, next: any) => {
     try {
-        const { idsolicitud, datosContrato } = req.body;
+        const { idsolicitud } = req.body;
+        let { datosContrato } = req.body;
 
         if (!idsolicitud) {
             return res.status(400).json({ error: "idsolicitud es requerido" });
+        }
+
+        // Validate and sanitize datosContrato to prevent layout-breaking strings
+        if (datosContrato && typeof datosContrato === 'object') {
+            for (const key in datosContrato) {
+                if (typeof datosContrato[key] === 'string' && key !== 'firmaProductor') {
+                    // Limit strings to 200 characters to prevent PDF layout overflow
+                    if (datosContrato[key].length > 200) {
+                        datosContrato[key] = datosContrato[key].substring(0, 200);
+                    }
+                }
+            }
         }
 
         // 1. Verificar si ya existe un contrato pendiente
@@ -91,13 +108,19 @@ router.get("/publico/:token", async (req, res, next) => {
  * POST /api/contratos/firmar/:token
  * Endpoint público que recibe la firma en base64
  */
-router.post("/firmar/:token", async (req, res, next) => {
+router.post("/firmar/:token", strictLimiter, async (req, res, next) => {
     try {
         const { token } = req.params;
         const { firmaBase64, aclaracionCliente } = req.body;
 
         if (!firmaBase64) {
             return res.status(400).json({ error: "Se requiere la firma" });
+        }
+
+        // Prevent OOM by limiting the base64 string size (~200KB limit ~ 200,000 chars)
+        // A normal react-signature-canvas signature is < 50KB in base64
+        if (firmaBase64.length > 200000) {
+            return res.status(413).json({ error: "La firma es demasiado pesada. Por favor, intente de nuevo." });
         }
 
         // 1. Obtener Contrato
@@ -125,13 +148,21 @@ router.post("/firmar/:token", async (req, res, next) => {
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
         // 4. Actualizar estado del contrato en BD
-        const contratoFirmado = await ContratoRepository.markAsSigned(
-            contrato.idcontrato,
-            pdfFirmadoUrl,
-            String(ip)
-        );
-
-        res.status(200).json(contratoFirmado);
+        try {
+            const contratoFirmado = await ContratoRepository.markAsSigned(
+                contrato.idcontrato,
+                pdfFirmadoUrl,
+                String(ip)
+            );
+            res.status(200).json(contratoFirmado);
+        } catch (dbError) {
+            // Cleanup orphaned file in Supabase if DB update fails
+            const fileNameMatch = pdfFirmadoUrl.match(/contratos\/(firmados\/.*?\.pdf)/);
+            if (fileNameMatch) {
+                await supabase.storage.from('contratos').remove([fileNameMatch[1]]);
+            }
+            throw dbError;
+        }
     } catch (error) {
         next(error);
     }
