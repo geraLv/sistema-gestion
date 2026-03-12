@@ -17,10 +17,11 @@ export class PdfService {
             let templatePath = process.env.TEMPLATE_PDF_PATH;
             if (!templatePath) {
                 const pathsToTry = [
-                    path.join(__dirname, '../../..', 'SOLICITUD .pdf'), // relative from dist/services
-                    path.join(process.cwd(), '../SOLICITUD .pdf'),      // relative from backend execution
-                    path.join(process.cwd(), 'SOLICITUD .pdf'),         // if executed from root
-                    path.resolve(__dirname, '../../../SOLICITUD .pdf')
+                    path.join(process.cwd(), 'templates', 'SOLICITUD .pdf'),            // relative from backend execution root
+                    path.join(__dirname, '../../templates/SOLICITUD .pdf'),             // relative from dist/services
+                    path.join(__dirname, '../../../SOLICITUD .pdf'),                    // relative from dist/services to workspace root (fallback)
+                    path.join(process.cwd(), '../SOLICITUD .pdf'),                      // relative from backend execution to workspace root (fallback)
+                    path.join(process.cwd(), 'SOLICITUD .pdf')                          // if executed from workspace root (fallback)
                 ];
                 for (const p of pathsToTry) {
                     if (fs.existsSync(p)) {
