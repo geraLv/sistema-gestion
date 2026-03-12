@@ -47,7 +47,7 @@ export class PortalClienteService {
             .split(" ")
             .map((word) => {
                 if (word.length <= 1) return word;
-                return word[0] + "*".repeat(word.length - 1);
+                return word[0] + "•".repeat(word.length - 1);
             })
             .join(" ");
     }
