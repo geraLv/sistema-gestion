@@ -28,6 +28,7 @@ export class ClienteRepository {
         relalocalidad,
         condicion,
         fechalta,
+        fecha_nacimiento,
         localidad(nombre) 
       `,
         { count: "exact" },
@@ -106,6 +107,7 @@ export class ClienteRepository {
         relalocalidad,
         condicion,
         fechalta,
+        fecha_nacimiento,
         localidad(nombre)
       `,
       )
@@ -136,6 +138,7 @@ export class ClienteRepository {
           relalocalidad: dto.selectLocalidades,
           condicion: 1, // activo por defecto
           fechalta: new Date().toISOString(),
+          fecha_nacimiento: dto.fecha_nacimiento || null,
         },
       ])
       .select()
@@ -162,6 +165,7 @@ export class ClienteRepository {
         telefono: dto.telefono,
         email: dto.email,
         relalocalidad: dto.selectLocalidades,
+        fecha_nacimiento: dto.fecha_nacimiento || null,
       })
       .eq("idcliente", dto.idcliente)
       .select()
@@ -196,6 +200,7 @@ export class ClienteRepository {
         relalocalidad,
         condicion,
         fechalta,
+        fecha_nacimiento,
         localidad(nombre)
       `,
       )

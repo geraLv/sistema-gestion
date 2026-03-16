@@ -96,7 +96,7 @@ router.get("/:id", async (req: Request, res: Response) => {
  * Opcionalmente: idcliente (si viene, es una actualización)
  */
 router.post("/", async (req: Request, res: Response) => {
-  const { idcliente, appynom, dni, direccion, telefono, email, selectLocalidades } =
+  const { idcliente, appynom, dni, direccion, telefono, email, selectLocalidades, fecha_nacimiento } =
     req.body;
 
   console.log(idcliente);
@@ -121,6 +121,7 @@ router.post("/", async (req: Request, res: Response) => {
       telefono,
       email,
       selectLocalidades: parseInt(selectLocalidades, 10),
+      fecha_nacimiento: fecha_nacimiento || undefined,
     };
 
     const result = await ClienteService.actualizarCliente(updateDto);
@@ -152,6 +153,7 @@ router.post("/", async (req: Request, res: Response) => {
       telefono,
       email,
       selectLocalidades: parseInt(selectLocalidades, 10),
+      fecha_nacimiento: fecha_nacimiento || undefined,
     };
 
     const result = await ClienteService.crearCliente(createDto);

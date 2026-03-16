@@ -8,6 +8,7 @@ export interface Cliente {
   relalocalidad: number;
   condicion: number;
   fechalta?: string;
+  fecha_nacimiento?: string;
 }
 
 export interface ClienteWithLocalidad extends Cliente {
@@ -21,6 +22,7 @@ export interface CreateClienteDTO {
   telefono: string;
   email?: string;
   selectLocalidades: number;
+  fecha_nacimiento?: string;
 }
 
 export interface UpdateClienteDTO {
@@ -31,6 +33,7 @@ export interface UpdateClienteDTO {
   telefono: string;
   email?: string;
   selectLocalidades: number;
+  fecha_nacimiento?: string;
 }
 
 export interface ClienteResponse {
