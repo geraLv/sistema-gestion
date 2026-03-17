@@ -37,7 +37,12 @@ export class ReporteService {
     return ReporteRepository.getRecibosMultiplesData(idcuotas);
   }
 
-  static renderRecibo(doc: typeof PDFDocument, data: ReciboCuotaData, sinFecha = false): void {
+  static renderRecibo(
+    doc: typeof PDFDocument,
+    data: ReciboCuotaData,
+    sinFecha = false,
+    firmaData?: { firma: string; aclaracion: string },
+  ): void {
     // Helper para convertir mm a puntos (1mm approx 2.835 points)
     const mm = (val: number) => val * 2.83465;
     const formatFechaEs = (value?: string | null) => {
@@ -307,6 +312,42 @@ export class ReporteService {
 
     // Render Duplicado (PHP Y approx 147)
     renderDetalleRecibo(147, "DUPLICADO", true);
+
+    // Draw signature and aclaración if provided
+    if (firmaData && firmaData.firma) {
+      try {
+        const base64Data = firmaData.firma.replace(
+          /^data:image\/png;base64,/,
+          "",
+        );
+        const imgBuffer = Buffer.from(base64Data, "base64");
+
+        // Coordinates from user (absolute points)
+        // Original (User labels it Original, y=498 is bottom half)
+        doc.image(imgBuffer, 225, 498, { width: 105, height: 38 });
+        doc
+          .font("Times-Roman")
+          .fontSize(10)
+          .text(firmaData.aclaracion, 351, 516, {
+            width: 178,
+            height: 17,
+            align: "center",
+          });
+
+        // Duplicado (User labels it Duplicado, y=155 is top half)
+        doc.image(imgBuffer, 239, 155, { width: 78, height: 42 });
+        doc
+          .font("Times-Roman")
+          .fontSize(10)
+          .text(firmaData.aclaracion, 351, 175, {
+            width: 178,
+            height: 17,
+            align: "center",
+          });
+      } catch (error) {
+        console.error("Error drawing signature on PDF:", error);
+      }
+    }
   }
 
   static renderRecibosMes(
@@ -314,37 +355,40 @@ export class ReporteService {
     recibos: ReciboCuotaData[],
     mes: string,
     sinFecha = false,
+    firmaData?: { firma: string; aclaracion: string },
   ): void {
     recibos.forEach((recibo, index) => {
       if (index > 0) {
         doc.addPage();
       }
       doc.fontSize(10).text(`Mes: ${mes}`, { align: "right" });
-      this.renderRecibo(doc, recibo, sinFecha);
+      this.renderRecibo(doc, recibo, sinFecha, firmaData);
     });
   }
 
   static renderRecibosMultiples(
     doc: typeof PDFDocument,
     recibos: ReciboCuotaData[],
+    firmaData?: { firma: string; aclaracion: string },
   ): void {
     recibos.forEach((recibo, index) => {
       if (index > 0) {
         doc.addPage();
       }
-      this.renderRecibo(doc, recibo);
+      this.renderRecibo(doc, recibo, false, firmaData);
     });
   }
 
   static renderRecibosSolicitudPagados(
     doc: typeof PDFDocument,
     recibos: ReciboCuotaData[],
+    firmaData?: { firma: string; aclaracion: string },
   ): void {
     recibos.forEach((recibo, index) => {
       if (index > 0) {
         doc.addPage();
       }
-      this.renderRecibo(doc, recibo);
+      this.renderRecibo(doc, recibo, false, firmaData);
     });
   }
 

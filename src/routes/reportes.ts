@@ -44,14 +44,18 @@ router.post("/recibos/cuota", async (req: Request, res: Response) => {
   );
 
   const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
+  const firmaData = req.body?.firmaProductor ? {
+    firma: req.body.firmaProductor,
+    aclaracion: req.body.aclaracionProductor || "",
+  } : undefined;
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibo(doc, data, sinFecha);
+  ReporteService.renderRecibo(doc, data, sinFecha, firmaData);
   doc.end();
 });
 
-router.get("/recibos/ultima-pagada/:nrosolicitud", async (req: Request, res: Response) => {
+router.post("/recibos/ultima-pagada/:nrosolicitud", async (req: Request, res: Response) => {
   const nrosolicitud = req.params.nrosolicitud;
 
   if (!nrosolicitud || nrosolicitud.trim() === "") {
@@ -85,11 +89,15 @@ router.get("/recibos/ultima-pagada/:nrosolicitud", async (req: Request, res: Res
     `attachment; filename=\"recibo-ultima-pagada-${nrosolicitud}.pdf\"`,
   );
 
-  const sinFecha = req.query?.sinFecha === "true";
+  const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
+  const firmaData = req.body?.firmaProductor ? {
+    firma: req.body.firmaProductor,
+    aclaracion: req.body.aclaracionProductor || "",
+  } : undefined;
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibo(doc, data, sinFecha);
+  ReporteService.renderRecibo(doc, data, sinFecha, firmaData);
   doc.end();
 });
 
@@ -119,9 +127,14 @@ router.post("/recibos/multiples", async (req: Request, res: Response) => {
     `attachment; filename=\"recibos-multiples.pdf\"`,
   );
 
+  const firmaData = req.body?.firmaProductor ? {
+    firma: req.body.firmaProductor,
+    aclaracion: req.body.aclaracionProductor || "",
+  } : undefined;
+
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosMultiples(doc, recibos);
+  ReporteService.renderRecibosMultiples(doc, recibos, firmaData);
   doc.end();
 });
 
@@ -195,7 +208,7 @@ router.get(
   },
 );
 
-router.get("/recibos/solicitud/:idsolicitud", async (req: Request, res: Response) => {
+router.post("/recibos/solicitud/:idsolicitud", async (req: Request, res: Response) => {
   const idsolicitud = Number(req.params.idsolicitud);
 
   if (!Number.isFinite(idsolicitud) || idsolicitud <= 0) {
@@ -206,22 +219,27 @@ router.get("/recibos/solicitud/:idsolicitud", async (req: Request, res: Response
   }
 
   const recibos = await ReporteService.getRecibosSolicitudPagados(idsolicitud);
-  if (!recibos || recibos.length === 0) {
+  if (recibos.length === 0) {
     return res.status(404).json({
       success: false,
-      error: "No hay recibos pagados para la solicitud",
+      error: "No hay cuotas pagadas para esta solicitud",
     });
   }
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `attachment; filename=\"recibos-solicitud-${idsolicitud}.pdf\"`,
+    `attachment; filename=\"recibos-pagados-${idsolicitud}.pdf\"`,
   );
+
+  const firmaData = req.body?.firmaProductor ? {
+    firma: req.body.firmaProductor,
+    aclaracion: req.body.aclaracionProductor || "",
+  } : undefined;
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosSolicitudPagados(doc, recibos);
+  ReporteService.renderRecibosSolicitudPagados(doc, recibos, firmaData);
   doc.end();
 });
 
@@ -331,8 +349,8 @@ router.get(
   },
 );
 
-router.get("/recibos/mes", async (req: Request, res: Response, next: NextFunction) => {
-  const mes = getMesFromQuery(String(req.query?.mes || ""));
+router.post("/recibos/mes", async (req: Request, res: Response, next: NextFunction) => {
+  const mes = getMesFromQuery(String(req.body?.mes || ""));
   if (!isValidMes(mes)) {
     return res.status(400).json({
       success: false,
@@ -340,7 +358,7 @@ router.get("/recibos/mes", async (req: Request, res: Response, next: NextFunctio
     });
   }
 
-  const localidadIdRaw = req.query?.localidadId;
+  const localidadIdRaw = req.body?.localidadId;
   const localidadId =
     localidadIdRaw !== undefined ? Number(localidadIdRaw) : undefined;
 
@@ -368,20 +386,24 @@ router.get("/recibos/mes", async (req: Request, res: Response, next: NextFunctio
     `attachment; filename=\"recibos-${mes}.pdf\"`,
   );
 
-  const sinFecha = req.query?.sinFecha === "true";
+  const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
+  const firmaData = req.body?.firmaProductor ? {
+    firma: req.body.firmaProductor,
+    aclaracion: req.body.aclaracionProductor || "",
+  } : undefined;
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha);
+  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha, firmaData);
   doc.end();
 });
 
-router.get("/recibos/mes-posterior", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/recibos/mes-posterior", async (req: Request, res: Response, next: NextFunction) => {
   const now = new Date();
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const mes = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}`;
 
-  const localidadIdRaw = req.query?.localidadId;
+  const localidadIdRaw = req.body?.localidadId;
   const localidadId =
     localidadIdRaw !== undefined ? Number(localidadIdRaw) : undefined;
 
@@ -409,16 +431,20 @@ router.get("/recibos/mes-posterior", async (req: Request, res: Response, next: N
     `attachment; filename=\"recibos-${mes}.pdf\"`,
   );
 
-  const sinFecha = req.query?.sinFecha === "true";
+  const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
+  const firmaData = req.body?.firmaProductor ? {
+    firma: req.body.firmaProductor,
+    aclaracion: req.body.aclaracionProductor || "",
+  } : undefined;
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha);
+  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha, firmaData);
   doc.end();
 });
 
-router.get("/recibos/mes-por-localidad", async (req: Request, res: Response, next: NextFunction) => {
-  const localidadIdRaw = req.query?.localidadId;
+router.post("/recibos/mes-por-localidad", async (req: Request, res: Response, next: NextFunction) => {
+  const localidadIdRaw = req.body?.localidadId;
   const localidadId =
     localidadIdRaw !== undefined ? Number(localidadIdRaw) : undefined;
 
@@ -429,7 +455,7 @@ router.get("/recibos/mes-por-localidad", async (req: Request, res: Response, nex
     });
   }
 
-  const mes = getMesFromQuery(String(req.query?.mes || ""));
+  const mes = getMesFromQuery(String(req.body?.mes || ""));
   if (!isValidMes(mes)) {
     return res.status(400).json({
       success: false,
@@ -451,16 +477,20 @@ router.get("/recibos/mes-por-localidad", async (req: Request, res: Response, nex
     `attachment; filename=\"recibos-${mes}-loc-${localidadId}.pdf\"`,
   );
 
-  const sinFecha = req.query?.sinFecha === "true";
+  const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
+  const firmaData = req.body?.firmaProductor ? {
+    firma: req.body.firmaProductor,
+    aclaracion: req.body.aclaracionProductor || "",
+  } : undefined;
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha);
+  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha, firmaData);
   doc.end();
 });
 
-router.get("/recibos/mes-posterior-por-localidad", async (req: Request, res: Response, next: NextFunction) => {
-  const localidadIdRaw = req.query?.localidadId;
+router.post("/recibos/mes-posterior-por-localidad", async (req: Request, res: Response, next: NextFunction) => {
+  const localidadIdRaw = req.body?.localidadId;
   const localidadId =
     localidadIdRaw !== undefined ? Number(localidadIdRaw) : undefined;
 
@@ -489,11 +519,15 @@ router.get("/recibos/mes-posterior-por-localidad", async (req: Request, res: Res
     `attachment; filename=\"recibos-${mes}-loc-${localidadId}.pdf\"`,
   );
 
-  const sinFecha = req.query?.sinFecha === "true";
+  const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
+  const firmaData = req.body?.firmaProductor ? {
+    firma: req.body.firmaProductor,
+    aclaracion: req.body.aclaracionProductor || "",
+  } : undefined;
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
-  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha);
+  ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha, firmaData);
   doc.end();
 });
 
