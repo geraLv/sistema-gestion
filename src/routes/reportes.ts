@@ -3,6 +3,10 @@ import PDFDocument from "pdfkit";
 import { ReporteService } from "../services/reporteService";
 import { SolicitudService } from "../services/solicitudService";
 import { CuotaService } from "../services/cuotaService";
+import { AuditService } from "../services/auditService";
+import { asyncHandler } from "../middleware/errorHandler";
+import { extractReciboFirmaData, ReciboFirmaData } from "../utils/reciboFirma";
+import { ValidationError } from "../utils/errors";
 
 const router = Router();
 
@@ -19,7 +23,39 @@ function isValidMes(value: string): boolean {
   return /^\d{4}-\d{2}$/.test(value);
 }
 
-router.post("/recibos/cuota", async (req: Request, res: Response) => {
+const getRequestMeta = (req: Request) => ({
+  ip: (req.headers["x-forwarded-for"] as string) || req.ip,
+  userAgent: req.headers["user-agent"] as string,
+});
+
+const logSignedReceiptAudit = async (
+  req: Request,
+  entityId: string,
+  firmaData: ReciboFirmaData,
+  extra: Record<string, unknown> = {},
+) => {
+  try {
+    await AuditService.log({
+      actor: (req as any).user,
+      action: "UPDATE",
+      entity: "recibos_firmados",
+      entityId,
+      before: null,
+      after: {
+        firmado: true,
+        mimeType: firmaData.mimeType,
+        sizeBytes: firmaData.sizeBytes,
+        aclaracion: firmaData.aclaracion,
+        ...extra,
+      },
+      ...getRequestMeta(req),
+    });
+  } catch (auditError: any) {
+    console.warn("No se pudo registrar auditoría de recibo firmado:", auditError?.message || auditError);
+  }
+};
+
+router.post("/recibos/cuota", asyncHandler(async (req: Request, res: Response) => {
   const idcuota = Number(req.body?.idcuota);
 
   if (!Number.isFinite(idcuota) || idcuota <= 0) {
@@ -29,12 +65,17 @@ router.post("/recibos/cuota", async (req: Request, res: Response) => {
     });
   }
 
+  const firmaData = extractReciboFirmaData(req.body);
   const data = await ReporteService.getReciboCuota(idcuota);
   if (!data) {
     return res.status(404).json({
       success: false,
       error: "Recibo no encontrado",
     });
+  }
+
+  if (data.estado !== 2) {
+    throw new ValidationError("Solo se pueden imprimir recibos de cuotas pagadas.");
   }
 
   res.setHeader("Content-Type", "application/pdf");
@@ -44,18 +85,19 @@ router.post("/recibos/cuota", async (req: Request, res: Response) => {
   );
 
   const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
-  const firmaData = req.body?.firmaProductor ? {
-    firma: req.body.firmaProductor,
-    aclaracion: req.body.aclaracionProductor || "",
-  } : undefined;
-
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
   ReporteService.renderRecibo(doc, data, sinFecha, firmaData);
   doc.end();
-});
 
-router.post("/recibos/ultima-pagada/:nrosolicitud", async (req: Request, res: Response) => {
+  if (firmaData) {
+    await logSignedReceiptAudit(req, `cuota:${idcuota}`, firmaData, {
+      endpoint: "recibos/cuota",
+    });
+  }
+}));
+
+router.post("/recibos/ultima-pagada/:nrosolicitud", asyncHandler(async (req: Request, res: Response) => {
   const nrosolicitud = req.params.nrosolicitud;
 
   if (!nrosolicitud || nrosolicitud.trim() === "") {
@@ -90,27 +132,34 @@ router.post("/recibos/ultima-pagada/:nrosolicitud", async (req: Request, res: Re
   );
 
   const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
-  const firmaData = req.body?.firmaProductor ? {
-    firma: req.body.firmaProductor,
-    aclaracion: req.body.aclaracionProductor || "",
-  } : undefined;
+  const firmaData = extractReciboFirmaData(req.body);
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
   ReporteService.renderRecibo(doc, data, sinFecha, firmaData);
   doc.end();
-});
 
-router.post("/recibos/multiples", async (req: Request, res: Response) => {
-  const idcuotas = req.body?.idcuotas as number[];
+  if (firmaData) {
+    await logSignedReceiptAudit(req, `solicitud:${nrosolicitud}:ultima-pagada`, firmaData, {
+      endpoint: "recibos/ultima-pagada",
+      idcuota,
+    });
+  }
+}));
 
-  console.log(idcuotas);
+router.post("/recibos/multiples", asyncHandler(async (req: Request, res: Response) => {
+  const idcuotasRaw = req.body?.idcuotas;
 
-  if (!Array.isArray(idcuotas) || idcuotas.length === 0) {
+  if (!Array.isArray(idcuotasRaw) || idcuotasRaw.length === 0) {
     return res.status(400).json({
       success: false,
       error: "idcuotas debe ser un arreglo no vacío de números",
     });
+  }
+
+  const idcuotas = [...new Set(idcuotasRaw.map((id: unknown) => Number(id)))];
+  if (idcuotas.some((id) => !Number.isFinite(id) || id <= 0)) {
+    throw new ValidationError("idcuotas contiene valores inválidos.");
   }
 
   const recibos = await ReporteService.getRecibosMultiples(idcuotas);
@@ -121,22 +170,33 @@ router.post("/recibos/multiples", async (req: Request, res: Response) => {
     });
   }
 
+  if (recibos.length !== idcuotas.length) {
+    throw new ValidationError(
+      "Solo se pueden imprimir cuotas pagadas y existentes en la selección.",
+    );
+  }
+
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
     `attachment; filename=\"recibos-multiples.pdf\"`,
   );
 
-  const firmaData = req.body?.firmaProductor ? {
-    firma: req.body.firmaProductor,
-    aclaracion: req.body.aclaracionProductor || "",
-  } : undefined;
+  const firmaData = extractReciboFirmaData(req.body);
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
   ReporteService.renderRecibosMultiples(doc, recibos, firmaData);
   doc.end();
-});
+
+  if (firmaData) {
+    await logSignedReceiptAudit(req, "multiples", firmaData, {
+      endpoint: "recibos/multiples",
+      cantidadRecibos: recibos.length,
+      idcuotas,
+    });
+  }
+}));
 
 // Endpoint para exportar monitor de solicitud
 router.get(
@@ -208,7 +268,7 @@ router.get(
   },
 );
 
-router.post("/recibos/solicitud/:idsolicitud", async (req: Request, res: Response) => {
+router.post("/recibos/solicitud/:idsolicitud", asyncHandler(async (req: Request, res: Response) => {
   const idsolicitud = Number(req.params.idsolicitud);
 
   if (!Number.isFinite(idsolicitud) || idsolicitud <= 0) {
@@ -232,16 +292,20 @@ router.post("/recibos/solicitud/:idsolicitud", async (req: Request, res: Respons
     `attachment; filename=\"recibos-pagados-${idsolicitud}.pdf\"`,
   );
 
-  const firmaData = req.body?.firmaProductor ? {
-    firma: req.body.firmaProductor,
-    aclaracion: req.body.aclaracionProductor || "",
-  } : undefined;
+  const firmaData = extractReciboFirmaData(req.body);
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
   ReporteService.renderRecibosSolicitudPagados(doc, recibos, firmaData);
   doc.end();
-});
+
+  if (firmaData) {
+    await logSignedReceiptAudit(req, `solicitud:${idsolicitud}`, firmaData, {
+      endpoint: "recibos/solicitud",
+      cantidadRecibos: recibos.length,
+    });
+  }
+}));
 
 // Endpoint para exportar análisis de cartera a PDF
 router.get(
@@ -349,7 +413,7 @@ router.get(
   },
 );
 
-router.post("/recibos/mes", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/recibos/mes", asyncHandler(async (req: Request, res: Response) => {
   const mes = getMesFromQuery(String(req.body?.mes || ""));
   if (!isValidMes(mes)) {
     return res.status(400).json({
@@ -387,18 +451,23 @@ router.post("/recibos/mes", async (req: Request, res: Response, next: NextFuncti
   );
 
   const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
-  const firmaData = req.body?.firmaProductor ? {
-    firma: req.body.firmaProductor,
-    aclaracion: req.body.aclaracionProductor || "",
-  } : undefined;
+  const firmaData = extractReciboFirmaData(req.body);
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
   ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha, firmaData);
   doc.end();
-});
 
-router.post("/recibos/mes-posterior", async (req: Request, res: Response, next: NextFunction) => {
+  if (firmaData) {
+    await logSignedReceiptAudit(req, `mes:${mes}`, firmaData, {
+      endpoint: "recibos/mes",
+      cantidadRecibos: recibos.length,
+      localidadId: localidadId ?? null,
+    });
+  }
+}));
+
+router.post("/recibos/mes-posterior", asyncHandler(async (req: Request, res: Response) => {
   const now = new Date();
   const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const mes = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}`;
@@ -432,18 +501,23 @@ router.post("/recibos/mes-posterior", async (req: Request, res: Response, next: 
   );
 
   const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
-  const firmaData = req.body?.firmaProductor ? {
-    firma: req.body.firmaProductor,
-    aclaracion: req.body.aclaracionProductor || "",
-  } : undefined;
+  const firmaData = extractReciboFirmaData(req.body);
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
   ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha, firmaData);
   doc.end();
-});
 
-router.post("/recibos/mes-por-localidad", async (req: Request, res: Response, next: NextFunction) => {
+  if (firmaData) {
+    await logSignedReceiptAudit(req, `mes-posterior:${mes}`, firmaData, {
+      endpoint: "recibos/mes-posterior",
+      cantidadRecibos: recibos.length,
+      localidadId: localidadId ?? null,
+    });
+  }
+}));
+
+router.post("/recibos/mes-por-localidad", asyncHandler(async (req: Request, res: Response) => {
   const localidadIdRaw = req.body?.localidadId;
   const localidadId =
     localidadIdRaw !== undefined ? Number(localidadIdRaw) : undefined;
@@ -478,18 +552,23 @@ router.post("/recibos/mes-por-localidad", async (req: Request, res: Response, ne
   );
 
   const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
-  const firmaData = req.body?.firmaProductor ? {
-    firma: req.body.firmaProductor,
-    aclaracion: req.body.aclaracionProductor || "",
-  } : undefined;
+  const firmaData = extractReciboFirmaData(req.body);
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
   ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha, firmaData);
   doc.end();
-});
 
-router.post("/recibos/mes-posterior-por-localidad", async (req: Request, res: Response, next: NextFunction) => {
+  if (firmaData) {
+    await logSignedReceiptAudit(req, `mes-localidad:${mes}:${localidadId}`, firmaData, {
+      endpoint: "recibos/mes-por-localidad",
+      cantidadRecibos: recibos.length,
+      localidadId,
+    });
+  }
+}));
+
+router.post("/recibos/mes-posterior-por-localidad", asyncHandler(async (req: Request, res: Response) => {
   const localidadIdRaw = req.body?.localidadId;
   const localidadId =
     localidadIdRaw !== undefined ? Number(localidadIdRaw) : undefined;
@@ -520,16 +599,21 @@ router.post("/recibos/mes-posterior-por-localidad", async (req: Request, res: Re
   );
 
   const sinFecha = req.body?.sinFecha === true || req.body?.sinFecha === "true";
-  const firmaData = req.body?.firmaProductor ? {
-    firma: req.body.firmaProductor,
-    aclaracion: req.body.aclaracionProductor || "",
-  } : undefined;
+  const firmaData = extractReciboFirmaData(req.body);
 
   const doc = new PDFDocument({ size: "A4", margin: 40 });
   doc.pipe(res);
   ReporteService.renderRecibosMes(doc, recibos, mes, sinFecha, firmaData);
   doc.end();
-});
+
+  if (firmaData) {
+    await logSignedReceiptAudit(req, `mes-posterior-localidad:${mes}:${localidadId}`, firmaData, {
+      endpoint: "recibos/mes-posterior-por-localidad",
+      cantidadRecibos: recibos.length,
+      localidadId,
+    });
+  }
+}));
 
 router.get("/solicitudes/monitor", async (req: Request, res: Response, next: NextFunction) => {
   const nroSolicitud = String(req.query?.nroSolicitud || "").trim();

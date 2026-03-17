@@ -66,6 +66,7 @@ export class ReporteRepository {
       nrocuota: (row as any).nrocuota,
       importe: (row as any).importe,
       vencimiento: (row as any).vencimiento,
+      estado: (row as any).estado,
       fecha: (row as any).fecha ?? null,
       nrosolicitud: solicitud.nrosolicitud,
       cliente: {
@@ -86,8 +87,6 @@ export class ReporteRepository {
   ): Promise<ReciboCuotaData[]> {
     if (!idcuotas || idcuotas.length === 0) return [];
 
-    console.log(`[ReporteRepository] Fetching multiples: ${idcuotas.join(",")}`);
-
     const { data, error } = await supabase
       .from("cuotas")
       .select(
@@ -101,9 +100,8 @@ export class ReporteRepository {
       `,
       )
       .in("idcuota", idcuotas)
+      .eq("estado", 2)
       .order("nrocuota", { ascending: true });
-
-    console.log(data, error);
     if (error) {
       console.error("Error fetching recibos multiples:", error.message);
       return [];
@@ -111,15 +109,6 @@ export class ReporteRepository {
 
     return (data || [])
       .map((row: any) => {
-        // Log status if not 2
-        if (row.estado !== 2) {
-          console.warn(
-            `[ReporteService] Multiple: Cuota ${row.idcuota} omitida. Estado: ${row.estado}`,
-          );
-          // If strict mode, return null. User implies they WANT it to work if paid.
-          // return null;
-        }
-
         const solicitud = Array.isArray(row.solicitud)
           ? row.solicitud[0]
           : row.solicitud;
@@ -146,6 +135,7 @@ export class ReporteRepository {
           nrocuota: row.nrocuota,
           importe: row.importe,
           vencimiento: row.vencimiento,
+          estado: row.estado,
           fecha: row.fecha ?? null,
           nrosolicitud: solicitud.nrosolicitud,
           cliente: {
@@ -210,6 +200,7 @@ export class ReporteRepository {
           nrocuota: row.nrocuota,
           importe: row.importe,
           vencimiento: row.vencimiento,
+          estado: row.estado,
           fecha: row.fecha ?? null,
           nrosolicitud: solicitud.nrosolicitud,
           cliente: {
@@ -301,6 +292,7 @@ export class ReporteRepository {
         nrocuota: row.nrocuota,
         importe: row.importe,
         vencimiento: row.vencimiento,
+        estado: row.estado,
         fecha: row.fecha ?? null,
         nrosolicitud: solicitud?.nrosolicitud || "",
         cliente: {

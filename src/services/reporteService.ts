@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
 import { ReporteRepository } from "../repositories/reporteRepository";
 import { ReciboCuotaData, SolicitudReporteRow } from "../types/reporte";
+import { ReciboFirmaData } from "../utils/reciboFirma";
 
 export class ReporteService {
   static async getReciboCuota(
@@ -41,7 +42,7 @@ export class ReporteService {
     doc: typeof PDFDocument,
     data: ReciboCuotaData,
     sinFecha = false,
-    firmaData?: { firma: string; aclaracion: string },
+    firmaData?: ReciboFirmaData,
   ): void {
     // Helper para convertir mm a puntos (1mm approx 2.835 points)
     const mm = (val: number) => val * 2.83465;
@@ -352,17 +353,11 @@ export class ReporteService {
     renderDetalleRecibo(147, "DUPLICADO", true);
 
     // Draw signature and aclaración if provided
-    if (firmaData && firmaData.firma) {
+    if (firmaData) {
       try {
-        const base64Data = firmaData.firma.replace(
-          /^data:image\/png;base64,/,
-          "",
-        );
-        const imgBuffer = Buffer.from(base64Data, "base64");
-
         // Coordenadas absolutas del PDF (ajustadas según referencia del usuario)
         // Original (mitad inferior)
-        doc.image(imgBuffer, 240, 648, { width: 77, height: 34 });
+        doc.image(firmaData.firmaBuffer, 240, 648, { width: 77, height: 34 });
         doc
           .font("Times-Roman")
           .fontSize(10)
@@ -373,7 +368,7 @@ export class ReporteService {
           });
 
         // Duplicado (mitad superior)
-        doc.image(imgBuffer, 238, 302, { width: 77, height: 41 });
+        doc.image(firmaData.firmaBuffer, 238, 302, { width: 77, height: 41 });
         doc
           .font("Times-Roman")
           .fontSize(10)
@@ -383,7 +378,7 @@ export class ReporteService {
             align: "center",
           });
       } catch (error) {
-        console.error("Error drawing signature on PDF:", error);
+        throw new Error("No se pudo estampar la firma en el recibo.");
       }
     }
   }
@@ -393,7 +388,7 @@ export class ReporteService {
     recibos: ReciboCuotaData[],
     mes: string,
     sinFecha = false,
-    firmaData?: { firma: string; aclaracion: string },
+    firmaData?: ReciboFirmaData,
   ): void {
     recibos.forEach((recibo, index) => {
       if (index > 0) {
@@ -407,7 +402,7 @@ export class ReporteService {
   static renderRecibosMultiples(
     doc: typeof PDFDocument,
     recibos: ReciboCuotaData[],
-    firmaData?: { firma: string; aclaracion: string },
+    firmaData?: ReciboFirmaData,
   ): void {
     recibos.forEach((recibo, index) => {
       if (index > 0) {
@@ -420,7 +415,7 @@ export class ReporteService {
   static renderRecibosSolicitudPagados(
     doc: typeof PDFDocument,
     recibos: ReciboCuotaData[],
-    firmaData?: { firma: string; aclaracion: string },
+    firmaData?: ReciboFirmaData,
   ): void {
     recibos.forEach((recibo, index) => {
       if (index > 0) {
