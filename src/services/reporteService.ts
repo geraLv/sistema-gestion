@@ -77,9 +77,7 @@ export class ReporteService {
         .text(label, mm(xMm), yPt);
 
       // Box
-      doc
-        .rect(mm(valXMm), mm(yMm - 1), mm(widthMm), mm(heightMm))
-        .stroke();
+      doc.rect(mm(valXMm), mm(yMm - 1), mm(widthMm), mm(heightMm)).stroke();
 
       // Dynamic Font Scaling to prevent overflow
       let size = 12;
@@ -98,13 +96,12 @@ export class ReporteService {
       const yOffset = (12 - size) / 2;
 
       // Value centered in box
-      doc
-        .text(value, mm(valXMm), yPt + 2 + yOffset, {
-          width: mm(widthMm),
-          height: mm(heightMm - 2),
-          align: "center",
-          lineBreak: false,
-        });
+      doc.text(value, mm(valXMm), yPt + 2 + yOffset, {
+        width: mm(widthMm),
+        height: mm(heightMm - 2),
+        align: "center",
+        lineBreak: false,
+      });
     };
 
     const renderDetalleRecibo = (
@@ -173,12 +170,11 @@ export class ReporteService {
         });
 
       // Tel y CUIT
-      doc
-        .text(
-          "Tel: 370-5048282 C.U.I.T: 30-71931515-8",
-          mm(60),
-          mm(logoY + 27),
-        );
+      doc.text(
+        "Tel: 370-5048282 C.U.I.T: 30-71931515-8",
+        mm(60),
+        mm(logoY + 27),
+      );
 
       doc.text("Responsable Inscripto", mm(77), mm(logoY + 31));
 
@@ -226,7 +222,7 @@ export class ReporteService {
 
       // 3. Datos Cliente con Cajas (coords relativas a startY + offset)
       // Ajustamos al PHP:
-      // Apellido (y=72 -> +45 from startY=27? No, PHP startY for header text is complex. 
+      // Apellido (y=72 -> +45 from startY=27? No, PHP startY for header text is complex.
       // PHP: Image at 35(y). Apellido at 72(y). Diff = 37mm.
 
       // Vamos a usar coordenadas relativas al bloque.
@@ -245,13 +241,34 @@ export class ReporteService {
       doc.rect(mm(15), rel(27), mm(179), mm(98)).stroke();
 
       // Apellido
-      drawField("Apellido y Nombre:", data.cliente.appynom || "", 20, 72 - 27 + startMmY, 58, 70);
+      drawField(
+        "Apellido y Nombre:",
+        data.cliente.appynom || "",
+        20,
+        72 - 27 + startMmY,
+        58,
+        70,
+      );
 
       // DNI
-      drawField("DNI:", data.cliente.dni || "", 133, 72 - 27 + startMmY, 144, 40);
+      drawField(
+        "DNI:",
+        data.cliente.dni || "",
+        133,
+        72 - 27 + startMmY,
+        144,
+        40,
+      );
 
       // Dirección
-      drawField("Dirección:", data.cliente.direccion || "", 20, 80 - 27 + startMmY, 41, 85);
+      drawField(
+        "Dirección:",
+        data.cliente.direccion || "",
+        20,
+        80 - 27 + startMmY,
+        41,
+        85,
+      );
 
       // Provincia (Formosa fixed)
       drawField("Provincia:", "Formosa", 127, 80 - 27 + startMmY, 148, 16);
@@ -260,13 +277,34 @@ export class ReporteService {
       drawField("C.P:", "3600", 164, 80 - 27 + startMmY, 174, 14);
 
       // Localidad
-      drawField("Localidad:", data.cliente.localidad || "", 20, 88 - 27 + startMmY, 41, 55);
+      drawField(
+        "Localidad:",
+        data.cliente.localidad || "",
+        20,
+        88 - 27 + startMmY,
+        41,
+        55,
+      );
 
       // Integración
-      drawField("Integración para:", data.producto.descripcion || "", 96, 88 - 27 + startMmY, 130, 58);
+      drawField(
+        "Integración para:",
+        data.producto.descripcion || "",
+        96,
+        88 - 27 + startMmY,
+        130,
+        58,
+      );
 
       // Cel
-      drawField("Cel:", data.cliente.telefono || "", 20, 96 - 27 + startMmY, 30, 98);
+      drawField(
+        "Cel:",
+        data.cliente.telefono || "",
+        20,
+        96 - 27 + startMmY,
+        30,
+        98,
+      );
 
       // Anticipo
       drawField("Anticipo:", "", 149, 96 - 27 + startMmY, 168, 20);
@@ -322,26 +360,26 @@ export class ReporteService {
         );
         const imgBuffer = Buffer.from(base64Data, "base64");
 
-        // Coordinates from user (absolute points)
-        // Original (User labels it Original, y=498 is bottom half)
-        doc.image(imgBuffer, 225, 498, { width: 105, height: 38 });
+        // Coordenadas absolutas del PDF (ajustadas según referencia del usuario)
+        // Original (mitad inferior)
+        doc.image(imgBuffer, 240, 648, { width: 77, height: 34 });
         doc
           .font("Times-Roman")
           .fontSize(10)
-          .text(firmaData.aclaracion, 351, 516, {
-            width: 178,
-            height: 17,
+          .text(firmaData.aclaracion, 352, 659, {
+            width: 173,
+            height: 15,
             align: "center",
           });
 
-        // Duplicado (User labels it Duplicado, y=155 is top half)
-        doc.image(imgBuffer, 239, 155, { width: 78, height: 42 });
+        // Duplicado (mitad superior)
+        doc.image(imgBuffer, 238, 302, { width: 77, height: 41 });
         doc
           .font("Times-Roman")
           .fontSize(10)
-          .text(firmaData.aclaracion, 351, 175, {
-            width: 178,
-            height: 17,
+          .text(firmaData.aclaracion, 358, 319, {
+            width: 164,
+            height: 16,
             align: "center",
           });
       } catch (error) {
@@ -491,9 +529,14 @@ export class ReporteService {
     doc.text("Sin datos disponibles.");
   }
 
-  static async renderMonitorSolicitud(doc: typeof PDFDocument, idsolicitud: number) {
+  static async renderMonitorSolicitud(
+    doc: typeof PDFDocument,
+    idsolicitud: number,
+  ) {
     // Implementación placeholder para resolver el error de build
-    doc.fontSize(20).text(`Monitor Solicitud #${idsolicitud}`, { align: "center" });
+    doc
+      .fontSize(20)
+      .text(`Monitor Solicitud #${idsolicitud}`, { align: "center" });
     doc.moveDown();
     doc.fontSize(12).text(`Fecha: ${new Date().toLocaleDateString()}`);
     doc.moveDown();
