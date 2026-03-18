@@ -117,6 +117,108 @@ export class CuotaRepository {
     return { data: (data as CuotaWithSolicitud[]) || [], total: count || 0 };
   }
 
+  /**
+   * Obtiene los cobros (cuotas pagadas) para las ventas (solicitudes) del usuario
+   */
+  static async getMisRegistros(
+    iduser: number,
+    page?: number,
+    pageSize?: number,
+    mes?: string,
+    q?: string
+  ): Promise<{ data: any[]; total: number; totalRecaudado: number }> {
+    let baseQuery = supabase
+      .from("cuotas")
+      .select(
+        `
+        idcuota, relasolicitud, nrocuota, importe, fecha, formapago,
+        solicitud!inner(
+          idsolicitud, nrosolicitud, relausuario,
+          cliente:relacliente(appynom, dni)
+        )
+      `,
+        { count: "exact" }
+      )
+      .eq("solicitud.relausuario", iduser)
+      .eq("estado", 2);
+
+    if (mes) {
+      const startDate = `${mes}-01`;
+      const [year, month] = mes.split('-');
+      const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+      baseQuery = baseQuery.gte("fecha", startDate).lte("fecha", endDate);
+    }
+
+    if (q && q.trim() !== "") {
+      const ids = await this.searchSolicitudIds(q);
+      if (ids.length === 0) {
+        return { data: [], total: 0, totalRecaudado: 0 };
+      }
+      baseQuery = baseQuery.in("relasolicitud", ids);
+    }
+
+
+    // Better way: just query the same baseQuery but only select importe:
+    let sumQuery = supabase
+      .from("cuotas")
+      .select("importe, solicitud!inner(relausuario)")
+      .eq("solicitud.relausuario", iduser)
+      .eq("estado", 2);
+
+    if (mes) {
+      const startDate = `${mes}-01`;
+      const [year, month] = mes.split('-');
+      const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+      sumQuery = sumQuery.gte("fecha", startDate).lte("fecha", endDate);
+    }
+
+    if (q && q.trim() !== "") {
+      const ids = await this.searchSolicitudIds(q);
+      sumQuery = sumQuery.in("relasolicitud", ids);
+    }
+
+    const { data: sumResult } = await sumQuery;
+    const totalRecaudado = sumResult ? sumResult.reduce((acc, row) => acc + row.importe, 0) : 0;
+
+    let query = baseQuery
+      .order("fecha", { ascending: false })
+      .order("idcuota", { ascending: false });
+
+    const size = pageSize && pageSize > 0 ? pageSize : undefined;
+    const currentPage = page && page > 0 ? page : 1;
+    if (size) {
+      const from = (currentPage - 1) * size;
+      const to = from + size - 1;
+      query = query.range(from, to);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching mis registros:", error.message);
+      throw new Error(`Error al obtener mis registros: ${error.message}`);
+    }
+
+    // Aplanar el resultado
+    const resultData = (data || []).map((row: any) => {
+      const sol = Array.isArray(row.solicitud) ? row.solicitud[0] : row.solicitud;
+      const cliente = sol?.cliente ? (Array.isArray(sol.cliente) ? sol.cliente[0] : sol.cliente) : null;
+      return {
+        idcuota: row.idcuota,
+        nrocuota: row.nrocuota,
+        importe: row.importe,
+        fecha: row.fecha,
+        formapago: row.formapago,
+        nroSolicitud: sol?.nrosolicitud,
+        idsolicitud: sol?.idsolicitud,
+        clienteNombre: cliente?.appynom || "",
+        clienteDni: cliente?.dni || "",
+      };
+    });
+
+    return { data: resultData, total: count || 0, totalRecaudado };
+  }
+
   private static async searchSolicitudIds(query: string): Promise<number[]> {
     const q = query.trim();
     if (!q) return [];

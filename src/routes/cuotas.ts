@@ -67,9 +67,40 @@ cuotasRouter.get("/", async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/cuotas/:idcuota - Obtener una cuota por ID
+ * GET /api/cuotas/mis-registros - Obtener registros de cobranza del usuario actual
  */
-cuotasRouter.get("/:idcuota", async (req: Request, res: Response) => {
+cuotasRouter.get("/mis-registros", async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user?.iduser) {
+      return res.status(401).json({ success: false, error: "Usuario no autenticado" });
+    }
+
+    const page = req.query.page ? Number(req.query.page) : undefined;
+    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : undefined;
+    const mes = typeof req.query.mes === "string" ? req.query.mes : undefined;
+    const q = typeof req.query.q === "string" ? req.query.q : undefined;
+
+    const cuotas = await CuotaService.obtenerMisRegistros(user.iduser, page, pageSize, mes, q);
+
+    res.json({
+      success: true,
+      data: cuotas.data,
+      total: cuotas.total,
+      totalRecaudado: cuotas.totalRecaudado,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: (error as Error).message,
+    });
+  }
+});
+
+/**
+ * GET /api/cuotas - Listar todas las cuotas
+ */
+cuotasRouter.get("/", async (req: Request, res: Response) => {
   try {
     const { idcuota } = req.params;
 

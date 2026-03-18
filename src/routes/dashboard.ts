@@ -4,9 +4,10 @@ import { authenticateToken } from "./auth";
 
 const router = Router();
 
-router.get("/", authenticateToken, async (_req: Request, res: Response) => {
+router.get("/", authenticateToken, async (req: Request, res: Response) => {
   try {
-    const data = await DashboardService.getDashboardSummary();
+    const mes = typeof req.query.mes === "string" ? req.query.mes : undefined;
+    const data = await DashboardService.getDashboardSummary(mes);
     return res.json({ success: true, data });
   } catch (error: any) {
     return res.status(500).json({

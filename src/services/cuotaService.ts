@@ -138,6 +138,19 @@ export class CuotaService {
   }
 
   /**
+   * Obtener mis registros (cuotas pagadas para las ventas del usuario)
+   */
+  static async obtenerMisRegistros(
+    iduser: number,
+    page?: number,
+    pageSize?: number,
+    mes?: string,
+    q?: string
+  ) {
+    return CuotaRepository.getMisRegistros(iduser, page, pageSize, mes, q);
+  }
+
+  /**
    * Obtener cuotas de una solicitud con resumen
    */
   static async obtenerCuotasSolicitud(idsolicitud: number) {

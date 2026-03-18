@@ -37,12 +37,21 @@ export class DashboardRepository {
     return count || 0;
   }
 
-  static async countCuotasCobradasEnFecha(fecha: string): Promise<number> {
-    const { count, error } = await supabase
+  static async countCuotasCobradasEnFecha(fecha: string, mes?: string): Promise<number> {
+    let query = supabase
       .from("cuotas")
       .select("idcuota", { count: "exact", head: true })
-      .eq("estado", 2)
-      .eq("fecha", fecha);
+      .eq("estado", 2);
+
+    if (mes) {
+      const startOfMonth = `${mes}-01`;
+      const endOfMonth = new Date(Number(mes.split("-")[0]), Number(mes.split("-")[1]), 0).toISOString().split("T")[0];
+      query = query.gte("fecha", startOfMonth).lte("fecha", endOfMonth);
+    } else {
+      query = query.eq("fecha", fecha);
+    }
+
+    const { count, error } = await query;
 
     if (error) {
       throw new Error(`Error al contar cuotas cobradas: ${error.message}`);
@@ -51,12 +60,21 @@ export class DashboardRepository {
     return count || 0;
   }
 
-  static async countCuotasVencidasEnFecha(fecha: string): Promise<number> {
-    const { count, error } = await supabase
+  static async countCuotasVencidasEnFecha(fecha: string, mes?: string): Promise<number> {
+    let query = supabase
       .from("cuotas")
       .select("idcuota", { count: "exact", head: true })
-      .eq("estado", 0)
-      .eq("vencimiento", fecha);
+      .eq("estado", 0);
+
+    if (mes) {
+      const startOfMonth = `${mes}-01`;
+      const endOfMonth = new Date(Number(mes.split("-")[0]), Number(mes.split("-")[1]), 0).toISOString().split("T")[0];
+      query = query.gte("vencimiento", startOfMonth).lte("vencimiento", endOfMonth);
+    } else {
+      query = query.eq("vencimiento", fecha);
+    }
+
+    const { count, error } = await query;
 
     if (error) {
       throw new Error(`Error al contar cuotas vencidas: ${error.message}`);
@@ -178,12 +196,11 @@ export class DashboardRepository {
   }
 
   /**
-   * Solicitudes creadas hoy con detalle de cliente, producto y vendedor
+   * Solicitudes creadas hoy (o el mes especificado) con detalle de cliente, producto y vendedor
    */
-  static async getSolicitudesHoy(): Promise<any[]> {
+  static async getSolicitudesHoy(mes?: string): Promise<any[]> {
     const hoy = new Date().toISOString().split("T")[0];
-
-    const { data, error } = await supabase
+    let query = supabase
       .from("solicitud")
       .select(
         `
@@ -198,13 +215,20 @@ export class DashboardRepository {
         producto(descripcion),
         vendedor:app_user!relausuario(nombre)
       `,
-      )
-      .gte("fechalta", `${hoy}T00:00:00`)
-      .lte("fechalta", `${hoy}T23:59:59`)
-      .order("idsolicitud", { ascending: false });
+      );
+
+    if (mes) {
+      const startOfMonth = `${mes}-01T00:00:00`;
+      const endOfMonth = new Date(Number(mes.split("-")[0]), Number(mes.split("-")[1]), 0).toISOString().split("T")[0] + "T23:59:59";
+      query = query.gte("fechalta", startOfMonth).lte("fechalta", endOfMonth);
+    } else {
+      query = query.gte("fechalta", `${hoy}T00:00:00`).lte("fechalta", `${hoy}T23:59:59`);
+    }
+
+    const { data, error } = await query.order("idsolicitud", { ascending: false });
 
     if (error) {
-      throw new Error(`Error al obtener solicitudes de hoy: ${error.message}`);
+      throw new Error(`Error al obtener solicitudes: ${error.message}`);
     }
 
     return (data || []).map((row: any) => {
@@ -228,12 +252,12 @@ export class DashboardRepository {
   }
 
   /**
-   * Cuotas cobradas hoy con detalle de solicitud y cliente
+   * Cuotas cobradas hoy (o en el mes) con detalle de solicitud y cliente
    */
-  static async getCuotasCobradasHoy(): Promise<any[]> {
+  static async getCuotasCobradasHoy(mes?: string): Promise<any[]> {
     const hoy = new Date().toISOString().split("T")[0];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("cuotas")
       .select(
         `
@@ -243,16 +267,25 @@ export class DashboardRepository {
         fecha,
         solicitud:relasolicitud(
           nrosolicitud,
-          cliente(appynom)
+          cliente(appynom),
+          vendedor:app_user!relausuario(nombre)
         )
       `,
       )
-      .eq("estado", 2)
-      .eq("fecha", hoy)
-      .order("idcuota", { ascending: false });
+      .eq("estado", 2);
+
+    if (mes) {
+      const startOfMonth = `${mes}-01`;
+      const endOfMonth = new Date(Number(mes.split("-")[0]), Number(mes.split("-")[1]), 0).toISOString().split("T")[0];
+      query = query.gte("fecha", startOfMonth).lte("fecha", endOfMonth);
+    } else {
+      query = query.eq("fecha", hoy);
+    }
+
+    const { data, error } = await query.order("idcuota", { ascending: false });
 
     if (error) {
-      throw new Error(`Error al obtener cobros de hoy: ${error.message}`);
+      throw new Error(`Error al obtener cobros: ${error.message}`);
     }
 
     return (data || []).map((row: any) => {
@@ -262,6 +295,12 @@ export class DashboardRepository {
           ? solicitud.cliente[0]
           : solicitud.cliente
         : null;
+      const vendedor = solicitud
+        ? Array.isArray(solicitud.vendedor)
+          ? solicitud.vendedor[0]
+          : solicitud.vendedor
+        : null;
+
       return {
         id: row.idcuota,
         nrocuota: row.nrocuota,
@@ -269,24 +308,34 @@ export class DashboardRepository {
         fecha: row.fecha,
         nroSolicitud: solicitud?.nrosolicitud || "",
         clienteNombre: cliente?.appynom || "",
+        vendedorNombre: vendedor?.nombre || vendedor?.apellidonombre || "",
       };
     });
   }
 
   /**
-   * Monto total cobrado hoy
+   * Monto total cobrado hoy (o en el mes)
    */
-  static async getMontoCobradasHoy(): Promise<number> {
+  static async getMontoCobradasHoy(mes?: string): Promise<number> {
     const hoy = new Date().toISOString().split("T")[0];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("cuotas")
       .select("importe")
-      .eq("estado", 2)
-      .eq("fecha", hoy);
+      .eq("estado", 2);
+
+    if (mes) {
+      const startOfMonth = `${mes}-01`;
+      const endOfMonth = new Date(Number(mes.split("-")[0]), Number(mes.split("-")[1]), 0).toISOString().split("T")[0];
+      query = query.gte("fecha", startOfMonth).lte("fecha", endOfMonth);
+    } else {
+      query = query.eq("fecha", hoy);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
-      throw new Error(`Error al calcular monto cobrado hoy: ${error.message}`);
+      throw new Error(`Error al calcular monto cobrado: ${error.message}`);
     }
 
     return (data || []).reduce((acc: number, c: any) => acc + (c.importe || 0), 0);
