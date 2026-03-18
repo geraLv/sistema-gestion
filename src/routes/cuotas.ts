@@ -98,9 +98,9 @@ cuotasRouter.get("/mis-registros", async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/cuotas - Listar todas las cuotas
+ * GET /api/cuotas/:idcuota - Obtener detalle de una cuota
  */
-cuotasRouter.get("/", async (req: Request, res: Response) => {
+cuotasRouter.get("/:idcuota", async (req: Request, res: Response) => {
   try {
     const { idcuota } = req.params;
 
