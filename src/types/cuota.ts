@@ -11,6 +11,7 @@ export interface Cuota {
   estado: 0 | 2; // 0=impaga, 2=pagada
   fecha?: string | null; // fecha de pago
   saldoanterior?: number;
+  idusuariocobro?: number | null;
   createdAt?: string;
 }
 
@@ -18,16 +19,19 @@ export interface CuotaWithSolicitud extends Cuota {
   nrosolicitud?: string;
   clienteNombre?: string;
   productoNombre?: string;
+  cobradoPor?: string;
 }
 
 export interface PagarCuotaDTO {
   idcuota: number;
   formapago?: string;
+  idusuariocobro?: number;
 }
 
 export interface PagarMultiplesCuotasDTO {
   idcuotas: number[];
   formapago?: string;
+  idusuariocobro?: number;
 }
 
 export interface ModificarImporteCuotaDTO {

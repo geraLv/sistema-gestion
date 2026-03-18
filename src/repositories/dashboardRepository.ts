@@ -265,11 +265,13 @@ export class DashboardRepository {
         nrocuota,
         importe,
         fecha,
+        formapago,
         solicitud:relasolicitud(
           nrosolicitud,
           cliente(appynom),
           vendedor:app_user!relausuario(nombre)
-        )
+        ),
+        cobrador:app_user!fk_cuotas_usuariocobro(nombre)
       `,
       )
       .eq("estado", 2);
@@ -295,20 +297,26 @@ export class DashboardRepository {
           ? solicitud.cliente[0]
           : solicitud.cliente
         : null;
-      const vendedor = solicitud
+      
+      const cobrador = row.cobrador ? (Array.isArray(row.cobrador) ? row.cobrador[0] : row.cobrador) : null;
+      const vendedorOriginal = solicitud
         ? Array.isArray(solicitud.vendedor)
           ? solicitud.vendedor[0]
           : solicitud.vendedor
         : null;
+      
+      // Mostrar al cobrador por defecto. Si no existe (cuota antigua), fallback al vendedor original.
+      const vendedorFinal = cobrador || vendedorOriginal;
 
       return {
         id: row.idcuota,
         nrocuota: row.nrocuota,
         importe: row.importe || 0,
         fecha: row.fecha,
+        formapago: row.formapago,
         nroSolicitud: solicitud?.nrosolicitud || "",
         clienteNombre: cliente?.appynom || "",
-        vendedorNombre: vendedor?.nombre || vendedor?.apellidonombre || "",
+        vendedorNombre: vendedorFinal?.nombre || vendedorFinal?.apellidonombre || "",
       };
     });
   }

@@ -275,6 +275,7 @@ cuotasRouter.get(
 cuotasRouter.post("/pagar", async (req: Request, res: Response) => {
   try {
     const { idcuota, formapago } = req.body;
+    const iduser = (req as any).user?.iduser;
 
     if (!idcuota) {
       return res.status(400).json({
@@ -284,7 +285,7 @@ cuotasRouter.post("/pagar", async (req: Request, res: Response) => {
     }
 
     const before = await CuotaRepository.getCuotaById(Number(idcuota));
-    const resultado = await CuotaService.pagarCuota({ idcuota, formapago });
+    const resultado = await CuotaService.pagarCuota({ idcuota, formapago, idusuariocobro: iduser });
     const after = await CuotaRepository.getCuotaById(Number(idcuota));
 
     try {
@@ -319,6 +320,7 @@ cuotasRouter.post("/pagar", async (req: Request, res: Response) => {
 cuotasRouter.post("/pagar-multiples", async (req: Request, res: Response) => {
   try {
     const { idcuotas, formapago } = req.body;
+    const iduser = (req as any).user?.iduser;
 
     if (!idcuotas || !Array.isArray(idcuotas) || idcuotas.length === 0) {
       return res.status(400).json({
@@ -330,7 +332,7 @@ cuotasRouter.post("/pagar-multiples", async (req: Request, res: Response) => {
     const before = await Promise.all(
       idcuotas.map((id: number) => CuotaRepository.getCuotaById(Number(id))),
     );
-    const resultado = await CuotaService.pagarMultiplesCuotas({ idcuotas, formapago });
+    const resultado = await CuotaService.pagarMultiplesCuotas({ idcuotas, formapago, idusuariocobro: iduser });
     const after = await Promise.all(
       idcuotas.map((id: number) => CuotaRepository.getCuotaById(Number(id))),
     );

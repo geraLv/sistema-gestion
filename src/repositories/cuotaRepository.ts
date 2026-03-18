@@ -68,12 +68,13 @@ export class CuotaRepository {
       .from("cuotas")
       .select(
         `
-        idcuota, relasolicitud, nrocuota, importe, vencimiento, estado, fecha, formapago,
+        idcuota, relasolicitud, nrocuota, importe, vencimiento, estado, fecha, formapago, idusuariocobro,
         solicitud:relasolicitud(
           nrosolicitud,
           idsolicitud,
           cliente:relacliente(appynom, dni)
-        )
+        ),
+        cobrador:app_user!fk_cuotas_usuariocobro(nombre, usuario)
       `,
         { count: "exact" },
       )
@@ -114,7 +115,12 @@ export class CuotaRepository {
       throw new Error(`Error al obtener cuotas: ${error.message}`);
     }
 
-    return { data: (data as CuotaWithSolicitud[]) || [], total: count || 0 };
+    const resultData = (data as any[]).map(row => ({
+      ...row,
+      cobradoPor: row.cobrador ? (Array.isArray(row.cobrador) ? row.cobrador[0]?.nombre || row.cobrador[0]?.usuario : row.cobrador?.nombre || row.cobrador?.usuario) : undefined
+    }));
+
+    return { data: resultData as CuotaWithSolicitud[], total: count || 0 };
   }
 
   /**
@@ -131,11 +137,12 @@ export class CuotaRepository {
       .from("cuotas")
       .select(
         `
-        idcuota, relasolicitud, nrocuota, importe, fecha, formapago,
+        idcuota, relasolicitud, nrocuota, importe, fecha, formapago, idusuariocobro,
         solicitud!inner(
           idsolicitud, nrosolicitud, relausuario,
           cliente:relacliente(appynom, dni)
-        )
+        ),
+        cobrador:app_user!fk_cuotas_usuariocobro(nombre, usuario)
       `,
         { count: "exact" }
       )
@@ -213,6 +220,7 @@ export class CuotaRepository {
         idsolicitud: sol?.idsolicitud,
         clienteNombre: cliente?.appynom || "",
         clienteDni: cliente?.dni || "",
+        cobradoPor: row.cobrador ? (Array.isArray(row.cobrador) ? row.cobrador[0]?.nombre || row.cobrador[0]?.usuario : row.cobrador?.nombre || row.cobrador?.usuario) : null,
       };
     });
 
@@ -313,9 +321,9 @@ export class CuotaRepository {
   }
 
   /**
-   * Pagar una cuota (actualizar estado a 2 y agregar fecha)
+   * Pagar una cuota (actualizar estado a 2 y agregar fecha y usuario)
    */
-  static async pagarCuota(idcuota: number, formapago?: string): Promise<Cuota> {
+  static async pagarCuota(idcuota: number, formapago?: string, idusuariocobro?: number): Promise<Cuota> {
     const hoy = new Date().toISOString().split("T")[0];
 
     // Obtener cuota actual
@@ -332,6 +340,9 @@ export class CuotaRepository {
 
     if (formapago) {
       payload.formapago = formapago;
+    }
+    if (idusuariocobro) {
+      payload.idusuariocobro = idusuariocobro;
     }
 
     const { data: cuotaActualizada, error: errorCuota } = await supabase

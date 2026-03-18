@@ -36,7 +36,7 @@ export class CuotaService {
     }
 
     // Pagar cuota
-    const cuotaPagada = await CuotaRepository.pagarCuota(dto.idcuota, dto.formapago);
+    const cuotaPagada = await CuotaRepository.pagarCuota(dto.idcuota, dto.formapago, dto.idusuariocobro);
 
     // Actualizar solicitud con nuevos valores
     const actualizado = await CuotaRepository.actualizarPorcentajeSolicitud(
@@ -63,7 +63,7 @@ export class CuotaService {
 
     for (const idcuota of dto.idcuotas) {
       try {
-        const resultado = await this.pagarCuota({ idcuota, formapago: dto.formapago });
+        const resultado = await this.pagarCuota({ idcuota, formapago: dto.formapago, idusuariocobro: dto.idusuariocobro });
         resultados.push(resultado);
         solicitudes.add(resultado.solicitudActualizada.totalabonado as any);
       } catch (error) {
