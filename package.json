@@ -6,7 +6,9 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "vitest"
+    "test": "vitest",
+    "notifications:daily:dev": "ts-node-dev --transpile-only src/scripts/runDailyNotifications.ts",
+    "notifications:daily": "node dist/scripts/runDailyNotifications.js"
   },
   "dependencies": {
     "@sentry/node": "^10.39.0",
