@@ -1,5 +1,47 @@
 import { supabase } from "../db";
 
+/**
+ * Helper: obtiene los IDs de cuotas que fueron genuinamente pagadas a través
+ * de la app en un rango de fechas, consultando la tabla audit_log.
+ * Maneja entity_id simples ("123") y compuestos ("123,456,789") de pagos múltiples.
+ */
+async function getAuditedCuotaIdsForDate(startISO: string, endISO: string): Promise<number[]> {
+  const ids = new Set<number>();
+  let offset = 0;
+  const batchSize = 1000;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("audit_log")
+      .select("entity_id")
+      .eq("entity", "cuotas")
+      .eq("action", "UPDATE")
+      .gte("created_at", startISO)
+      .lte("created_at", endISO)
+      .range(offset, offset + batchSize - 1);
+
+    if (error) {
+      console.error("Error fetching audit_log for dashboard:", error.message);
+      break;
+    }
+    if (!data || data.length === 0) break;
+
+    for (const row of data) {
+      const raw = String(row.entity_id);
+      // Soportar entity_id compuestos: "12,34,56"
+      for (const part of raw.split(",")) {
+        const n = Number(part.trim());
+        if (Number.isFinite(n) && n > 0) ids.add(n);
+      }
+    }
+
+    if (data.length < batchSize) break;
+    offset += batchSize;
+  }
+
+  return Array.from(ids);
+}
+
 export class DashboardRepository {
   static async countClientes(): Promise<number> {
     const { count, error } = await supabase
@@ -38,26 +80,27 @@ export class DashboardRepository {
   }
 
   static async countCuotasCobradasEnFecha(fecha: string, mes?: string): Promise<number> {
-    let query = supabase
-      .from("cuotas")
-      .select("idcuota", { count: "exact", head: true })
-      .eq("estado", 2);
-
     if (mes) {
+      // Vista mensual: filtrar por campo fecha (rango del mes)
       const startOfMonth = `${mes}-01`;
       const endOfMonth = new Date(Number(mes.split("-")[0]), Number(mes.split("-")[1]), 0).toISOString().split("T")[0];
-      query = query.gte("fecha", startOfMonth).lte("fecha", endOfMonth);
-    } else {
-      query = query.eq("fecha", fecha);
+      const { count, error } = await supabase
+        .from("cuotas")
+        .select("idcuota", { count: "exact", head: true })
+        .eq("estado", 2)
+        .gte("fecha", startOfMonth)
+        .lte("fecha", endOfMonth);
+
+      if (error) throw new Error(`Error al contar cuotas cobradas: ${error.message}`);
+      return count || 0;
     }
 
-    const { count, error } = await query;
-
-    if (error) {
-      throw new Error(`Error al contar cuotas cobradas: ${error.message}`);
-    }
-
-    return count || 0;
+    // Vista "Hoy": usar audit_log para contar solo cobros reales
+    const auditIds = await getAuditedCuotaIdsForDate(
+      `${fecha}T00:00:00`,
+      `${fecha}T23:59:59`,
+    );
+    return auditIds.length;
   }
 
   static async countCuotasVencidasEnFecha(fecha: string, mes?: string): Promise<number> {
@@ -281,7 +324,13 @@ export class DashboardRepository {
       const endOfMonth = new Date(Number(mes.split("-")[0]), Number(mes.split("-")[1]), 0).toISOString().split("T")[0];
       query = query.gte("fecha", startOfMonth).lte("fecha", endOfMonth);
     } else {
-      query = query.eq("fecha", hoy);
+      // Vista "Hoy": filtrar por IDs auditados
+      const auditIds = await getAuditedCuotaIdsForDate(
+        `${hoy}T00:00:00`,
+        `${hoy}T23:59:59`,
+      );
+      if (auditIds.length === 0) return [];
+      query = query.in("idcuota", auditIds);
     }
 
     const { data, error } = await query.order("idcuota", { ascending: false });
@@ -337,7 +386,13 @@ export class DashboardRepository {
       const endOfMonth = new Date(Number(mes.split("-")[0]), Number(mes.split("-")[1]), 0).toISOString().split("T")[0];
       query = query.gte("fecha", startOfMonth).lte("fecha", endOfMonth);
     } else {
-      query = query.eq("fecha", hoy);
+      // Vista "Hoy": filtrar por IDs auditados
+      const auditIds = await getAuditedCuotaIdsForDate(
+        `${hoy}T00:00:00`,
+        `${hoy}T23:59:59`,
+      );
+      if (auditIds.length === 0) return 0;
+      query = query.in("idcuota", auditIds);
     }
 
     const { data, error } = await query;
