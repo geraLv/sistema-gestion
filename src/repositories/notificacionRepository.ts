@@ -80,6 +80,18 @@ export class NotificacionRepository {
   static async getCuotaCandidates(
     runDate: string,
   ): Promise<CuotaNotificationCandidate[]> {
+    const run = parseDateUtc(runDate);
+
+    // Calcular fechas exactas para filtros de base de datos
+    const d3 = new Date(run);
+    d3.setUTCDate(d3.getUTCDate() + 3);
+    const datePlus3 = toDateOnly(d3.toISOString());
+
+    const d1 = new Date(run);
+    d1.setUTCDate(d1.getUTCDate() + 1);
+    const datePlus1 = toDateOnly(d1.toISOString());
+
+    // Buscamos: Vence en 3 dias, Vence mañana, o Ya venció ( < runDate)
     const { data, error } = await supabase
       .from("cuotas")
       .select(
@@ -93,7 +105,8 @@ export class NotificacionRepository {
       `,
       )
       .eq("estado", 0)
-      .not("vencimiento", "is", null);
+      .not("vencimiento", "is", null)
+      .or(`vencimiento.eq.${datePlus3},vencimiento.eq.${datePlus1},vencimiento.lt.${runDate}`);
 
     if (error) {
       throw new Error(
@@ -222,7 +235,7 @@ export class NotificacionRepository {
       `,
       )
       .in("estado", ["pending", "failed"])
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(safeLimit * 5);
 
     if (error) {

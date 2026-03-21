@@ -1,7 +1,8 @@
 export interface SendEmailInput {
   to: string;
   subject: string;
-  text: string;
+  text?: string;
+  html?: string;
 }
 
 export interface SendEmailResult {
@@ -68,6 +69,7 @@ export class EmailService {
           to: [input.to],
           subject: input.subject,
           text: input.text,
+          html: input.html,
         }),
       });
     } catch (error) {

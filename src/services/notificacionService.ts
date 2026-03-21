@@ -267,10 +267,11 @@ export class NotificacionService {
     );
 
     try {
+      const isHtml = rendered.body.trim().startsWith("<") || rendered.body.includes("</");
       const result = await EmailService.sendEmail({
         to: job.clienteEmail,
         subject: rendered.subject,
-        text: rendered.body,
+        ...(isHtml ? { html: rendered.body } : { text: rendered.body }),
       });
 
       await NotificacionRepository.markSent(job.idenvio, result.providerMessageId);
