@@ -1,5 +1,6 @@
 import { supabase } from "../db";
 import { Cuota, CuotaWithSolicitud } from "../types/cuota";
+import { getLocalDateISO } from "../utils/dateLocal";
 
 export class CuotaRepository {
   /**
@@ -324,7 +325,7 @@ export class CuotaRepository {
    * Pagar una cuota (actualizar estado a 2 y agregar fecha y usuario)
    */
   static async pagarCuota(idcuota: number, formapago?: string, idusuariocobro?: number): Promise<Cuota> {
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = getLocalDateISO();
 
     // Obtener cuota actual
     const cuotaActual = await this.getCuotaById(idcuota);

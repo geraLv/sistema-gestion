@@ -23,6 +23,8 @@ router.get("/", async (req: Request, res: Response) => {
  */
 router.get("/search", async (req: Request, res: Response) => {
   const query = String(req.query.q || "");
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) ? rawLimit : undefined;
 
   if (!query.trim()) {
     return res
@@ -30,7 +32,7 @@ router.get("/search", async (req: Request, res: Response) => {
       .json({ success: false, error: "Parámetro de búsqueda requerido" });
   }
 
-  const result = await LocalidadService.buscarLocalidades(query);
+  const result = await LocalidadService.buscarLocalidades(query, limit);
 
   if (result.success) {
     return res.json({ success: true, data: result.data });

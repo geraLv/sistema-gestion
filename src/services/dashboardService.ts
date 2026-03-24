@@ -1,12 +1,13 @@
 import { DashboardRepository } from "../repositories/dashboardRepository";
+import { getLocalDateISO } from "../utils/dateLocal";
 
 export class DashboardService {
   static async getDashboardSummary(mes?: string) {
     const hoy = new Date();
-    const hoyStr = hoy.toISOString().split("T")[0];
+    const hoyStr = getLocalDateISO(hoy);
     const hace30 = new Date(hoy);
     hace30.setDate(hace30.getDate() - 30);
-    const hace30Str = hace30.toISOString().split("T")[0];
+    const hace30Str = getLocalDateISO(hace30);
 
     const [
       totalClientes,

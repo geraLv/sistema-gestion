@@ -42,13 +42,18 @@ export class LocalidadRepository {
   /**
    * Busca localidades por nombre
    */
-  static async searchLocalidades(query: string): Promise<Localidad[]> {
+  static async searchLocalidades(
+    query: string,
+    limit: number = 50,
+  ): Promise<Localidad[]> {
+    const safeLimit = Math.max(1, Math.min(limit, 200));
+
     const { data, error } = await supabase
       .from("localidad")
       .select("*")
       .ilike("nombre", `%${query}%`)
       .order("nombre", { ascending: true })
-      .limit(50);
+      .limit(safeLimit);
 
     if (error) {
       console.error("Error searching localidades:", error.message);

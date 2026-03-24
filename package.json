@@ -6,7 +6,9 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "vitest"
+    "test": "vitest",
+    "localidades:catalogo:dry": "node scripts/importLocalidadesCatalogo.js --dry-run",
+    "localidades:catalogo": "node scripts/importLocalidadesCatalogo.js"
   },
   "dependencies": {
     "@sentry/node": "^10.39.0",

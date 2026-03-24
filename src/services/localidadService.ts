@@ -23,7 +23,10 @@ export class LocalidadService {
   /**
    * Busca localidades por nombre
    */
-  static async buscarLocalidades(query: string): Promise<LocalidadResponse> {
+  static async buscarLocalidades(
+    query: string,
+    limit?: number,
+  ): Promise<LocalidadResponse> {
     try {
       if (!query || query.trim().length === 0) {
         return {
@@ -34,6 +37,7 @@ export class LocalidadService {
 
       const localidades = await LocalidadRepository.searchLocalidades(
         query.trim(),
+        limit,
       );
       return {
         success: true,
