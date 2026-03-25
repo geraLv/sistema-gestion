@@ -166,7 +166,7 @@ export class ReporteService {
       doc
         .fontSize(11)
         .fillColor("#17202A")
-        .text("Facebook: credito gestion 1", mm(95), mm(logoY + 23), {
+        .text("Facebook: credito gestion", mm(95), mm(logoY + 23), {
           underline: false,
         });
 

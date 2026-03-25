@@ -106,6 +106,28 @@ export class PdfService {
                 }
             };
 
+            // Reemplaza el CUIT y vuelve a dibujar "RESPONSABLE INSCRIPTO" para evitar superposiciones.
+            const cuitEmpresa = d.cuitEmpresa || "30-71931515-8";
+            firstPage.drawRectangle({
+                x: 302,
+                y: 702,
+                width: 190,
+                height: 14,
+                color: rgb(1, 1, 1),
+            });
+            drawText(cuitEmpresa, 303, 704, firstPage, 9);
+            drawText("RESPONSABLE INSCRIPTO", 365, 704, firstPage, 10);
+
+            // Quita el "1" de "Facebook: credito gestion 1" del template.
+            firstPage.drawRectangle({
+                x: 388,
+                y: 734,
+                width: 126,
+                height: 14,
+                color: rgb(1, 1, 1),
+            });
+            drawText("Facebook: credito gestion", 389, 736, firstPage, 10);
+
             // Escribimos valores en las coordenadas especificas de la PÁGINA 1
             // Se le suma +5 a X a todos los campos para separarlos
             // Algunos campos suben un poco en Y (+3)
