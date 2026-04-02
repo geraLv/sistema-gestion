@@ -52,10 +52,11 @@ export class PdfService {
 
             // Extraemos datos de datosContrato o usamos fallbacks vacios (ya que la UI deberia mandar todo)
             const d = datosContrato || {};
+            const solicitudNro = String((solicitud as any).nrosolicitud || "").trim();
 
             const vehNuevo = d.vehNuevo || "";
             const vehUsado = d.vehUsado || "";
-            const nroOp = d.nroOp || "";
+            const nroOp = (typeof d.nroOp === "string" ? d.nroOp.trim() : "") || solicitudNro;
             const fechaDia = d.fechaDia || "";
             const fechaMes = d.fechaMes || "";
             const fechaAnio = d.fechaAnio || "";
@@ -87,7 +88,9 @@ export class PdfService {
             const recibiDe = d.recibiDe || "";
             const sumaLetras = d.sumaLetras || "";
             const sumaNum = d.sumaNum || "";
-            const pagoPedidoNro = d.pagoPedidoNro || "";
+            const pagoPedidoNro =
+                (typeof d.pagoPedidoNro === "string" ? d.pagoPedidoNro.trim() : "") ||
+                solicitudNro;
             const sonPesos = d.sonPesos || "";
 
             // Montos y cuotas (por si aca, aunque los principales van en las coords dadas)
@@ -128,12 +131,36 @@ export class PdfService {
             });
             drawText("Facebook: credito gestion", 389, 736, firstPage, 10);
 
+            // Header box next to "SOLICITUD DE PEDIDO":
+            // Some template versions include a baked-in hardcoded number (e.g. "Nº 02684").
+            // Redraw this box with the current solicitud number so it never stays static.
+            const nroSolicitudHeader = nroOp || solicitudNro;
+            firstPage.drawRectangle({
+                x: 484,
+                y: 655,
+                width: 99,
+                height: 32,
+                color: rgb(0.93, 0.93, 0.93),
+                borderColor: rgb(0, 0, 0),
+                borderWidth: 1,
+            });
+            drawText(`Nº ${nroSolicitudHeader}`, 491, 667, firstPage, 14);
+
             // Escribimos valores en las coordenadas especificas de la PÁGINA 1
             // Se le suma +5 a X a todos los campos para separarlos
             // Algunos campos suben un poco en Y (+3)
 
             drawText(vehNuevo, 100, 631);
             drawText(vehUsado, 246, 631);
+            // The PDF template can contain a baked-in operation number (e.g. 02684).
+            // Clear that area before writing the dynamic one.
+            firstPage.drawRectangle({
+                x: 372,
+                y: 628,
+                width: 82,
+                height: 16,
+                color: rgb(1, 1, 1),
+            });
             drawText(nroOp, 378, 631);
 
             drawText(fechaDia, 453, 631);
@@ -168,6 +195,14 @@ export class PdfService {
             drawText(recibiDe, 88, 136);
             drawText(sumaLetras, 100, 113); // subido
             drawText(sumaNum, 287, 113); // subido
+            // Same cleanup for the "En pago del pedido N°" field.
+            firstPage.drawRectangle({
+                x: 146,
+                y: 86,
+                width: 104,
+                height: 16,
+                color: rgb(1, 1, 1),
+            });
             drawText(pagoPedidoNro, 153, 89); // subido
 
             // SON$ tiene letras más grandes (size 12)
