@@ -110,7 +110,7 @@ export class PdfService {
             };
 
             // Reemplaza el CUIT y vuelve a dibujar "RESPONSABLE INSCRIPTO" para evitar superposiciones.
-            const cuitEmpresa = d.cuitEmpresa || "30-71931515-8";
+            const cuitEmpresa = d.cuitEmpresa || "27-35387794-7";
             firstPage.drawRectangle({
                 x: 302,
                 y: 702,
@@ -196,10 +196,11 @@ export class PdfService {
             drawText(sumaLetras, 100, 113); // subido
             drawText(sumaNum, 287, 113); // subido
             // Same cleanup for the "En pago del pedido N°" field.
+            // Ancho reducido a 70 para no tapar el texto "Cuyo importe..." que sigue a continuación.
             firstPage.drawRectangle({
                 x: 146,
                 y: 86,
-                width: 104,
+                width: 50,
                 height: 16,
                 color: rgb(1, 1, 1),
             });
@@ -208,7 +209,7 @@ export class PdfService {
             // SON$ tiene letras más grandes (size 12)
             drawText(sonPesos, 88, 49, firstPage, 12);
 
-            // Aclaración Productor
+            // Aclaración Productor en página 1 (zona RECIBO)
             const aclaracionProductor = d.aclaracionProductor || "";
             drawText(aclaracionProductor, 469, 55);
 
@@ -224,6 +225,7 @@ export class PdfService {
                     const imageBytes = Buffer.from(base64Data, "base64");
                     const signatureImage = await pdfDoc.embedPng(imageBytes);
 
+                    // Firma rep. empresa en página 1 (zona RECIBO AUTORIZADO)
                     firstPage.drawImage(signatureImage, {
                         x: 323,
                         y: 30,
@@ -231,12 +233,14 @@ export class PdfService {
                         height: 49,
                     });
 
-                    if (secondPage) {
-                        secondPage.drawImage(signatureImage, {
-                            x: 89,
-                            y: 30,
-                            width: 136,
-                            height: 48,
+                    // Firma rep. empresa en página 3 (x:92, y:127, w:134, h:34)
+                    const thirdPage = pages.length > 2 ? pages[2] : null;
+                    if (thirdPage) {
+                        thirdPage.drawImage(signatureImage, {
+                            x: 92,
+                            y: 127,
+                            width: 134,
+                            height: 34,
                         });
                     }
                 } catch (e) {
@@ -244,16 +248,21 @@ export class PdfService {
                 }
             }
 
-            // Escribimos en la PÁGINA 2
+            // Aclaración rep. empresa en página 3 (x:371, y:146)
+            const thirdPageForAcl = pages.length > 2 ? pages[2] : null;
+            if (thirdPageForAcl) {
+                drawText(aclaracionProductor, 371, 146, thirdPageForAcl);
+            }
+
+            // Nombre del cliente en página 2 (x:237, y:799)
             if (secondPage) {
-                drawText(clienteNombre, 211, 799, secondPage);
-                drawText(aclaracionProductor, 373, 53, secondPage);
+                drawText(clienteNombre, 237, 799, secondPage);
             }
 
             // 3. Serializar y guardar
             const pdfConDatos = await pdfDoc.save();
 
-            // 3. Subir a Supabase Storage
+            // 4. Subir a Supabase Storage
             const token = uuidv4();
             const fileName = `pendientes/contrato_${solicitud.idsolicitud}_${token}.pdf`;
 
@@ -300,7 +309,6 @@ export class PdfService {
 
             const pdfDoc = await PDFDocument.load(originalPdfBytes);
             const pages = pdfDoc.getPages();
-            const lastPage = pages[pages.length - 1];
 
             // 2. Procesar imagen de firma
             const base64Data = firmaBase64.replace(/^data:image\/(png|jpeg);base64,/, "");
@@ -308,7 +316,8 @@ export class PdfService {
             const signatureImage = await pdfDoc.embedPng(imageBytes);
 
             const firstPage = pages[0];
-            const secondPage = pages.length > 1 ? pages[1] : null;
+            // En el nuevo template (3 páginas), las firmas finales están en la página 3 (índice 2)
+            const signaturePage = pages.length > 2 ? pages[2] : (pages.length > 1 ? pages[1] : firstPage);
 
             const drawText = (text: string | number | undefined, x: number, y: number, page: any, fontSize = 9) => {
                 if (text && page) {
@@ -321,15 +330,16 @@ export class PdfService {
                 }
             };
 
-            // Estampar Aclaracion Cliente
+            // Aclaración cliente en página 1 (zona RECIBO AUTORIZADO) y en página 3 (firma final)
             if (aclaracionCliente) {
                 drawText(aclaracionCliente, 500, 220, firstPage, 10);
-                if (secondPage) {
-                    drawText(aclaracionCliente, 366, 93, secondPage, 10);
+                // Página 3: aclaración cliente (x:369, y:185)
+                if (signaturePage !== firstPage) {
+                    drawText(aclaracionCliente, 369, 185, signaturePage, 10);
                 }
             }
 
-            // Estampar Firma Cliente en Pagina 1
+            // Firma cliente en Página 1 (zona RECIBO AUTORIZADO)
             firstPage.drawImage(signatureImage, {
                 x: 395,
                 y: 202,
@@ -337,22 +347,21 @@ export class PdfService {
                 height: 43,
             });
 
-            // Estampar Firma Cliente en Pagina 2
-            if (secondPage) {
-                secondPage.drawImage(signatureImage, {
-                    x: 104,
-                    y: 79,
-                    width: 125,
-                    height: 32,
+            // Firma cliente en Página 3 (x:108, y:171, w:120, h:36)
+            if (signaturePage !== firstPage) {
+                signaturePage.drawImage(signatureImage, {
+                    x: 108,
+                    y: 171,
+                    width: 120,
+                    height: 36,
                 });
             }
 
-            // Sello de tiempo (Opcional, en la esquina de la pagina 1 o 2)
-            const selloPage = secondPage || firstPage;
-            const { width } = selloPage.getSize();
-            selloPage.drawText(`Firmado digitalmente el ${new Date().toLocaleString()}`, {
+            // Sello de tiempo en la última página (página 3)
+            const { width } = signaturePage.getSize();
+            signaturePage.drawText(`Firmado digitalmente el ${new Date().toLocaleString()}`, {
                 x: width / 2 - 100,
-                y: 20, // Lo bajo a 20 para que no choque con la firma
+                y: 20,
                 size: 8,
                 color: rgb(0, 0, 0),
             });
